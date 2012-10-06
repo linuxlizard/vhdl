@@ -20,8 +20,7 @@ architecture test_basys2_arch of test_basys2 is
     signal led: std_logic_vector(7 downto 0);
 
     component switch_to_led is 
-        port(   rst : in std_logic;
-                clk : in std_logic;
+        port(  mclk : in std_logic;
                 btn : in std_logic_vector(3 downto 0);
                  sw : in std_logic_vector(7 downto 0);
                 led : out std_logic_vector(7 downto 0)
@@ -30,8 +29,7 @@ architecture test_basys2_arch of test_basys2 is
 
 begin
     switch_to_led_uut : switch_to_led
-        port map( rst => rst, 
-                  clk => mclk,
+        port map( mclk => mclk,
                   btn => btn,
                   sw => sw,
                   led => led );
