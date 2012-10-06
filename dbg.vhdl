@@ -1,3 +1,7 @@
+-- Put useful functions into a shareable package.
+--
+-- David Poole 06-Oct-2012
+
 library ieee;
 use ieee.std_logic_1164.ALL;
 use ieee.numeric_std.all;
