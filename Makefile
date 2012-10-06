@@ -2,7 +2,8 @@ all : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_basys2
 
 test_basys2 : test_basys2.o switch_to_led.o regrotate.o register.o divider.o
-	ghdl -e --ieee=synopsys -fexplicit $@
+	ghdl -m --ieee=synopsys -fexplicit $@
+#	ghdl -e --ieee=synopsys -fexplicit $@
 
 test_basys2.o : test_basys2.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
@@ -12,7 +13,8 @@ switch_to_led.o : switch_to_led.vhdl
 
 
 test_regrotate : test_regrotate.o regrotate.o
-	ghdl -e --ieee=synopsys -fexplicit $@
+	ghdl -m --ieee=synopsys -fexplicit $@
+#	ghdl -e --ieee=synopsys -fexplicit $@
 
 test_regrotate.o : test_regrotate.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
@@ -21,8 +23,11 @@ regrotate.o : regrotate.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
 
-test_ssegmuxor : test_ssegmuxor.o ssegmuxor.o divider.o dbg.o
-	ghdl -e --ieee=synopsys -fexplicit $@
+test_ssegmuxor : test_ssegmuxor.vhdl ssegmuxor.vhdl divider.vhdl dbg.vhdl
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+#test_ssegmuxor : test_ssegmuxor.o ssegmuxor.o divider.o dbg.o
+#	echo ghdl -e --ieee=synopsys -fexplicit $@
 
 test_ssegmuxor.o : test_ssegmuxor.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
@@ -32,7 +37,8 @@ ssegmuxor.o : ssegmuxor.vhdl
 
 
 test_divider : test_divider.o divider.o
-	ghdl -e --ieee=synopsys -fexplicit $@
+	ghdl -m --ieee=synopsys -fexplicit $@
+#	ghdl -e --ieee=synopsys -fexplicit $@
 
 test_divider.o : test_divider.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
@@ -42,7 +48,8 @@ divider.o : divider.vhdl
 
 
 test_sseg : test_sseg.o sevenseg.o
-	ghdl -e --ieee=synopsys -fexplicit $@
+	ghdl -m --ieee=synopsys -fexplicit $@
+#	ghdl -e --ieee=synopsys -fexplicit $@
 
 test_sseg.o : test_sseg.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
@@ -55,7 +62,8 @@ SimpleSsegLedDemo.o : SimpleSsegLedDemo.vhd
 
 
 test_counter : test_counter.o counter.o
-	ghdl -e --ieee=synopsys -fexplicit $@
+	ghdl -m --ieee=synopsys -fexplicit $@
+#	ghdl -e --ieee=synopsys -fexplicit $@
 
 counter.o : counter.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
@@ -65,14 +73,16 @@ test_counter.o : test_counter.vhdl
 
 
 test_bcd : test_bcd.o
-	ghdl -e --ieee=synopsys -fexplicit $@
+	ghdl -m --ieee=synopsys -fexplicit $@
+#	ghdl -e --ieee=synopsys -fexplicit $@
 
 test_bcd.o : test_bcd.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
 
 test_register : test_register.o register.o
-	ghdl -e --ieee=synopsys -fexplicit $@
+	ghdl -m --ieee=synopsys -fexplicit $@
+#	ghdl -e --ieee=synopsys -fexplicit $@
 
 register.o : register.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
