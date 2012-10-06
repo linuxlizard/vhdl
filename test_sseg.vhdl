@@ -69,7 +69,7 @@ begin
 
         num := "0001";
 
-        for i in 0 to 20 loop
+        for i in 0 to 40 loop
             t_nibble <= std_logic_vector(num);
             write( str, t_segments );
             write( str, string'(" = "));
