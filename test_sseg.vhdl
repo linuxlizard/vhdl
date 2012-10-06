@@ -35,32 +35,6 @@ architecture run_test_sseg of test_sseg is
   signal t_anodes : std_logic_vector( 3 downto 0 );
   signal t_nibble: std_logic_vector( 3 downto 0 );
 
-  function sevenseg_to_integer( sseg : in std_logic_vector( 6 downto 0 )) return integer is
-    -- Convert seven-segment bits to a number suitable for printing.
-    -- Handy for test/debug
-    -- Uses code from SimpleSsegLedDemo.vhd 
-    begin
-        case sseg is 
-         when "1111001" => return 1;
-         when "0100100" => return 2;
-         when "0110000" => return 3;
-         when "0011001" => return 4;
-         when "0010010" => return 5;
-         when "0000010" => return 6;
-         when "1111000" => return 7;
-         when "0000000" => return 8;
-         when "0010000" => return 9;
-         when "0001000" => return 16#A#;
-         when "0000011" => return 16#b#;
-         when "1000110" => return 16#C#;
-         when "0100001" => return 16#d#;
-         when "0000110" => return 16#E#;
-         when "0001110" => return 16#F#;
-         when "1000000" => return 0;
-         when others => return -1;            
-        end case;
-    end sevenseg_to_integer;
-
 begin
     uut : SevenSegmentEncoder 
         port map( rst => t_rst,
@@ -99,7 +73,7 @@ begin
             t_nibble <= std_logic_vector(num);
             write( str, t_segments );
             write( str, string'(" = "));
-            write( str, sevenseg_to_integer( t_segments ) );
+            write( str, work.debug_utils.sevenseg_to_integer( t_segments ) );
             writeline( output, str );
             wait for 20 ns;
 
