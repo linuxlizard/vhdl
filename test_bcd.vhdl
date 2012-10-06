@@ -1,3 +1,6 @@
+-- Test the BCD encode function
+-- David Poole 28-Sep-2012
+
 library ieee;
 
 use ieee.std_logic_1164.all;
@@ -10,59 +13,82 @@ begin
 end entity test_bcd;
 
 architecture run_test_bcd of test_bcd is
+    signal t_rst : std_logic := '1';
+    signal t_clk : std_logic := '0';
+    signal t_byte_in : std_logic_vector( 7 downto 0 );
+    signal t_bcd_out : std_logic_vector( 11 downto 0 );
 
-    -- http://vhdlguru.blogspot.com/2010/04/8-bit-binary-to-bcd-converter-double.html
-    function to_bcd ( bin : std_logic_vector(7 downto 0) ) return std_logic_vector is
+    component bcd_encoder is
+        port (rst : in std_logic;
+              clk : in std_logic;
+              byte_in : in std_logic_vector(7 downto 0 );
+              bcd_out : out std_logic_vector( 11 downto 0 )
+             );
+    end component bcd_encoder;
 
---    use ieee.std_logic_arith.all;
-    use ieee.std_logic_unsigned.all;
+    procedure dbg_bcd( byte_value : in std_logic_vector(7 downto 0 );
+                      bcd_value : in std_logic_vector(11 downto 0 ) ) is
 
-    variable i : integer:=0;
-    variable bcd : std_logic_vector(11 downto 0) := (others => '0');
-    variable bint : std_logic_vector(7 downto 0) := bin;
-
+        variable str : line;
     begin
-    for i in 0 to 7 loop  -- repeating 8 times.
-    bcd(11 downto 1) := bcd(10 downto 0);  --shifting the bits.
-    bcd(0) := bint(7);
-    bint(7 downto 1) := bint(6 downto 0);
-    bint(0) :='0';
+        write( str, string'("input=") );
+        hwrite( str, byte_value );
+        write( str, string'(" output=") );
+        hwrite( str, bcd_value );
+        writeline( output, str );
 
-
-    if(i < 7 and bcd(3 downto 0) > "0100") then --add 3 if BCD digit is greater than 4.
-    bcd(3 downto 0) := bcd(3 downto 0) + "0011";
-    end if;
-
-    if(i < 7 and bcd(7 downto 4) > "0100") then --add 3 if BCD digit is greater than 4.
-    bcd(7 downto 4) := bcd(7 downto 4) + "0011";
-    end if;
-
-    if(i < 7 and bcd(11 downto 8) > "0100") then  --add 3 if BCD digit is greater than 4.
-    bcd(11 downto 8) := bcd(11 downto 8) + "0011";
-    end if;
-
-    end loop;
-    return bcd;
-    end to_bcd;
+    end procedure dbg_bcd;
 
 begin
+    uut : bcd_encoder 
+        port map( rst => t_rst,
+                  clk => t_clk,
+                  byte_in => t_byte_in,
+                  bcd_out => t_bcd_out );
+    
+    clock : process is 
+    begin
+        t_clk <= '0'; wait for 10 ns;
+        t_clk <= '1'; wait for 10 ns;
+    end process clock;
+
     stimulus : process is
-        variable bin : std_logic_vector(7 downto 0);
-        variable bout : std_logic_vector(11 downto 0);
-        variable num : unsigned(7 downto 0);
+        variable i : integer;
         variable str : line;
     begin
         write( output, string'("hello, world") );
+        t_byte_in <= "00000000";
+        t_rst <= '1';
+        wait for 15 ns;
 
-        bin := "01010011";
---        num := unsigned'(42);
---        bin := std_logic_vector(num);
-        write( str, bin);
-        writeline( output, str );
+        t_byte_in <= "00000001";
+        t_rst <= '0';
+        wait for 10 ns;
 
-        bout := to_bcd( bin );
-        write( str, bout);
-        writeline( output, str );
+        wait for 10 ns;
+
+        dbg_bcd( t_byte_in, t_bcd_out );
+        wait for 10 ns;
+
+        t_byte_in <= "00001110";
+        wait for 10 ns;
+
+        dbg_bcd( t_byte_in, t_bcd_out );
+        wait for 10 ns;
+
+        t_byte_in <= "11111111";
+        wait for 10 ns;
+
+        dbg_bcd( t_byte_in, t_bcd_out );
+        wait for 10 ns;
+
+        for i in 1 to 100 loop
+            t_byte_in <= std_logic_vector(to_unsigned(i,8));
+            wait for 10 ns;
+
+            dbg_bcd( t_byte_in, t_bcd_out );
+            wait for 10 ns;
+        end loop;
 
        wait;
     end process stimulus;
