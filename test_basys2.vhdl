@@ -13,7 +13,7 @@ end entity test_basys2;
 
 architecture test_basys2_arch of test_basys2 is 
     -- use the same names as the actual hardware
-    signal clk :  std_logic;
+    signal mclk :  std_logic;
     signal rst : std_logic;
     signal btn: std_logic_vector(3 downto 0);
     signal sw :  std_logic_vector(7 downto 0);
@@ -31,15 +31,15 @@ architecture test_basys2_arch of test_basys2 is
 begin
     switch_to_led_uut : switch_to_led
         port map( rst => rst, 
-                  clk => clk,
+                  clk => mclk,
                   btn => btn,
                   sw => sw,
                   led => led );
                   
     clock : process is
     begin
-       clk <= '0'; wait for 10 ns;
-       clk <= '1'; wait for 10 ns;
+       mclk <= '0'; wait for 10 ns;
+       mclk <= '1'; wait for 10 ns;
     end process clock;
 
     stimulus : process is
