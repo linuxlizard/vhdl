@@ -23,7 +23,7 @@ regrotate.o : regrotate.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
 
-test_ssegmuxor : test_ssegmuxor.vhdl ssegmuxor.vhdl divider.vhdl dbg.vhdl
+test_ssegmuxor : test_ssegmuxor.o ssegmuxor.o divider.o dbg.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 
 #test_ssegmuxor : test_ssegmuxor.o ssegmuxor.o divider.o dbg.o
@@ -72,13 +72,15 @@ test_counter.o : test_counter.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
 
-test_bcd : test_bcd.o
+test_bcd : test_bcd.o bcd.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 #	ghdl -e --ieee=synopsys -fexplicit $@
 
 test_bcd.o : test_bcd.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
+bcd.o : bcd.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
 
 test_register : test_register.o register.o
 	ghdl -m --ieee=synopsys -fexplicit $@
