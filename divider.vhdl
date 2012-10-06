@@ -10,8 +10,8 @@ entity clk_divider is
 end entity clk_divider;
 
 architecture clk_divider_arch of clk_divider is
-    signal counter : integer;
-    signal curr_clk : std_logic;
+    signal counter : integer := 0;
+    signal curr_clk : std_logic := '0';
 begin
     behavior : process(clk_in) is
     begin

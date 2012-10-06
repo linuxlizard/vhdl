@@ -13,7 +13,7 @@ entity d_register is
 end entity d_register;
 
 architecture behavioral of d_register is
-   signal current_value : std_logic_vector(width-1 downto 0 );
+   signal current_value : std_logic_vector(width-1 downto 0 ) := (others=>'0');
 begin
    behavior : process(clk, reset) is
    begin

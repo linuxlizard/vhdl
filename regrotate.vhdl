@@ -17,7 +17,7 @@ entity regrotate is
 end entity regrotate;
 
 architecture regrotater_arch of regrotate is 
-    signal which : std_logic;
+    signal which : std_logic := '0';
 begin
     reg_rotate : process(clk) is 
     begin
