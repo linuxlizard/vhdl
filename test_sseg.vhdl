@@ -1,3 +1,10 @@
+-- Test the Seven Segment / BCD encoder
+--
+-- Uses code from SimpleSsegLedDemo.vhd 
+--
+-- David Poole 30-Sep-2012
+
+
 library ieee;
 use ieee.std_logic_1164.ALL;
 use ieee.numeric_std.all;
@@ -31,6 +38,7 @@ architecture run_test_sseg of test_sseg is
   function sevenseg_to_integer( sseg : in std_logic_vector( 6 downto 0 )) return integer is
     -- Convert seven-segment bits to a number suitable for printing.
     -- Handy for test/debug
+    -- Uses code from SimpleSsegLedDemo.vhd 
     begin
         case sseg is 
          when "1111001" => return 1;
@@ -70,6 +78,7 @@ begin
     stimulus : process is
         variable str : line;
         variable i : integer;
+        variable num : unsigned (3 downto 0);
     begin
         t_buttons <= "0000";
         t_switches <= "00000000";
@@ -84,12 +93,17 @@ begin
         t_rst <= '0';
         wait for 10 ns;
 
+        num := "0001";
+
         for i in 0 to 20 loop
-            t_nibble <= "1100";
+            t_nibble <= std_logic_vector(num);
             write( str, t_segments );
             write( str, string'(" = "));
             write( str, sevenseg_to_integer( t_segments ) );
             writeline( output, str );
+            wait for 20 ns;
+
+            num := num+1; 
             wait for 20 ns;
         end loop;
 
