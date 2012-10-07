@@ -22,31 +22,41 @@ end entity ssegmuxor;
 
 architecture clk_ssegmuxor_arch of ssegmuxor is
     signal counter : integer := 0;
+    signal save_digit_out : std_logic_vector(6 downto 0) := "0000000";
 begin
     behavior : process(clk) is
     begin
         if reset='1' then
             counter <= 0;
         elsif rising_edge(clk) then
-            counter <= (counter + 1) mod 4;
             case counter is
                 when 0 => 
                     anode_out <= "0111";
-                    digit_out <= digit_0;
+                    save_digit_out <= digit_0;
+--                    save_digit_out <= "1111001";  -- 1
+                    counter <= 1;
                 when 1 =>
                     anode_out <= "1011";
-                    digit_out <= digit_1;
+                    save_digit_out <= digit_1;
+--                    digit_out <= "0100100";  -- 2
+                    counter <= 2;
                 when 2 =>
                     anode_out <= "1101";
-                    digit_out <= digit_2;
+                    save_digit_out <= digit_2;
+--                    digit_out <= "0110000";  -- 3
+                    counter <= 3;
                 when 3 =>
                     anode_out <= "1110";
-                    digit_out <= digit_3;
+                    save_digit_out <= digit_3;
+--                    digit_out <= "0011001";  -- 4
+                    counter <= 0;
                 when others =>
                     anode_out <= "0000";
-                    digit_out <= "1111111";
+                    save_digit_out <= "1111111";
             end case;
         end if;
+
+        digit_out <= save_digit_out;
     end process behavior;
 end architecture clk_ssegmuxor_arch;
 
