@@ -5,12 +5,19 @@
 library ieee;
 use ieee.std_logic_1164.ALL;
 use ieee.numeric_std.all;
+use std.textio.all;
+use ieee.std_logic_textio.all;
 
 package debug_utils is
 
   function sevenseg_to_integer( sseg : in std_logic_vector( 6 downto 0 )) return integer;
 
+  procedure dbg_7seg( seg : std_logic_vector(6 downto 0 );
+                         an : std_logic_vector(3 downto 0);
+                         dp : std_logic );
+
 end package debug_utils;
+
 
 package body debug_utils is
 
@@ -38,6 +45,22 @@ package body debug_utils is
          when others => return -1;            
         end case;
     end sevenseg_to_integer;
+
+    procedure dbg_7seg( seg : std_logic_vector(6 downto 0 );
+                         an : std_logic_vector(3 downto 0);
+                         dp : std_logic ) is
+        variable str : line;
+    begin
+        write( str, string'("seg=") );
+        write( str, seg );
+        write( str, string'(" value=") );
+        write( str, work.debug_utils.sevenseg_to_integer( seg ) );
+        write( str, string'(" an=") );
+        write( str, an );
+        write( str, string'(" dp=") );
+        write( str, dp );
+        writeline(output,str);
+    end procedure dbg_7seg;
 
 end package body debug_utils;
 
