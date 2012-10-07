@@ -1,5 +1,16 @@
 all : test_regrotate test_ssegmuxor test_divider test_sseg \
-        test_counter test_bcd test_register test_basys2 test_digits_to_7seg
+        test_counter test_bcd test_register test_basys2 test_digits_to_7seg\
+        test_switch_to_7seg
+
+test_switch_to_7seg : test_switch_to_7seg.o switch_to_7seg.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+test_switch_to_7seg.o : test_switch_to_7seg.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+switch_to_7seg.o : switch_to_7seg.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+    
 
 test_digits_to_7seg : test_digits_to_7seg.o digits_to_7seg.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -9,6 +20,7 @@ test_digits_to_7seg.o : test_digits_to_7seg.vhdl
 
 digits_to_7seg.o : digits_to_7seg.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
+
 
 test_basys2 : test_basys2.o switch_to_led.o regrotate.o register.o divider.o
 	ghdl -m --ieee=synopsys -fexplicit $@
