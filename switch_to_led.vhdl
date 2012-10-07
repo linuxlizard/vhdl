@@ -63,11 +63,13 @@ architecture run_switch_to_led of switch_to_led is
     signal reg2_out_en : std_logic;
 
 begin
-	 rst <= '0';
+    -- future compatibility for an incoming reset signal
+    rst <= '0';
 	 
     -- the actual divider will be 125e6 or so (25Mhz down to 0.20hz)
     divider : clk_divider
-        generic map(clkmax => 125000000)
+        generic map(clkmax => 4) -- simulation
+--        generic map(clkmax => 125000000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
                 clk_out => rotater_clock );
