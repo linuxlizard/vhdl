@@ -18,22 +18,24 @@ end entity regrotate;
 
 architecture regrotater_arch of regrotate is 
     signal which : std_logic := '0';
+    signal internal_reg_out : std_logic_vector (7 downto 0) := (others=>'0');
 begin
     reg_rotate : process(clk) is 
     begin
-    if reset='1' then
-        which <= '0';
-        reg_out <= "00000000";
-        which_out <= '0';
-    elsif rising_edge(clk) then
-        if which='0' then
-            reg_out <= reg1;
-        else
-            reg_out <= reg2;
+        if reset='1' then
+            which <= '0';
+            internal_reg_out <= "00000000";
+            which_out <= '0';
+        elsif rising_edge(clk) then
+            if which='0' then
+                internal_reg_out <= reg1;
+            else
+                internal_reg_out <= reg2;
+            end if;
+            which_out <= which;
+            which <= not which;
         end if;
-        which_out <= which;
-        which <= not which;
-    end if;
+        reg_out <= internal_reg_out;
     end process reg_rotate;
 
 end architecture regrotater_arch;
