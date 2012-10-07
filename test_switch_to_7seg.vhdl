@@ -53,6 +53,7 @@ begin
         write( str, string'("hello, world") );
         writeline( output, str );
 
+        dp <= '0';
         rst <= '1';
         btn <= "0000";
         sw <= "00000000";
@@ -89,9 +90,9 @@ begin
         wait for 10 ns;
 
         -- so what do we have?
-        for i in 0 to 100 loop
+        for i in 0 to 1000 loop
             work.debug_utils.dbg_7seg( seg, an, dp ); 
-            wait for 50 ns;
+            wait for 20 ns;
         end loop;
 
         rst <= '1';
