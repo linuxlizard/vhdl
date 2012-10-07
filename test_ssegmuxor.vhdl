@@ -17,26 +17,26 @@ architecture run_test_ssegmuxor of test_ssegmuxor is
                clk_out : out std_logic );
     end component clk_divider;
 
-    component clk_ssegmuxor is
+    component ssegmuxor is
         port (  reset : in std_logic;
                 clk : in std_logic;
+                digit_0 : in std_logic_vector (6 downto 0 );
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
                 digit_3 : in std_logic_vector (6 downto 0 );
-                digit_4 : in std_logic_vector (6 downto 0 );
 
                 anode_out : out std_logic_vector (3 downto 0 );
                 digit_out : out std_logic_vector (6 downto 0 ) 
             );
-    end component clk_ssegmuxor;
+    end component ssegmuxor;
 
     signal t_rst : std_logic := '1';
     signal t_clk : std_logic := '0';
     signal t_seg_muxor_clock_in : std_logic := '0';
+    signal t_digit_0 : std_logic_vector (6 downto 0);
     signal t_digit_1 : std_logic_vector (6 downto 0);
     signal t_digit_2 : std_logic_vector (6 downto 0);
     signal t_digit_3 : std_logic_vector (6 downto 0);
-    signal t_digit_4 : std_logic_vector (6 downto 0);
 
     signal t_anode_out : std_logic_vector (3 downto 0);
     signal t_digit_out : std_logic_vector (6 downto 0);
@@ -48,13 +48,13 @@ begin
                  clk_in => t_clk,
                  clk_out => t_seg_muxor_clock_in );
 
-    uut : clk_ssegmuxor
+    uut : ssegmuxor
         port map( reset => t_rst,
                   clk => t_seg_muxor_clock_in,
+                  digit_0 => t_digit_0,
                   digit_1 => t_digit_1,
                   digit_2 => t_digit_2,
                   digit_3 => t_digit_3,
-                  digit_4 => t_digit_4,
                   anode_out => t_anode_out,
                   digit_out => t_digit_out );
 
@@ -70,10 +70,10 @@ begin
     begin
         t_rst <= '1';
         -- 2, 4, 6, 8 encodings for 7-seg
-        t_digit_1 <= "0100100";
-        t_digit_2 <= "0011001";
-        t_digit_3 <= "0000010";
-        t_digit_4 <= "0000000";
+        t_digit_0 <= "0100100";
+        t_digit_1 <= "0011001";
+        t_digit_2 <= "0000010";
+        t_digit_3 <= "0000000";
         write( str, string'("Hello, world") );
         writeline( output, str );
         wait for 15 ns;
