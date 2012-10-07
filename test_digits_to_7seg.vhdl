@@ -48,7 +48,18 @@ architecture test_digits_to_7seg_arch of test_digits_to_7seg is
             ); 
     end component digits_to_7seg;
 
-    procedure dbg_7seg( seg : std_logic_vector(6 downto 0 );
+    component d_register is
+        generic (width : integer);
+        port (clk : in std_logic;
+              reset : in std_logic := '1';
+              input_enable : in std_logic;
+              output_enable : in std_logic;
+              data_in : in std_logic_vector( width-1 downto 0 );
+              data_out : out std_logic_vector( width-1 downto 0 )
+        );
+    end component d_register;
+
+    procedure old_dbg_7seg( seg : std_logic_vector(6 downto 0 );
                          an : std_logic_vector(3 downto 0);
                          dp : std_logic ) is
         variable str : line;
@@ -62,7 +73,7 @@ architecture test_digits_to_7seg_arch of test_digits_to_7seg is
         write( str, string'(" dp=") );
         write( str, dp );
         writeline(output,str);
-    end procedure dbg_7seg;
+    end procedure old_dbg_7seg;
 
 begin
     run_digits_to_7seg : digits_to_7seg 
@@ -89,11 +100,11 @@ begin
         wait for 15 ns;
 
         rst <= '0';
-        t_byte_in <= "10000000";
+--        t_byte_in <= "10000000";
         wait for 10 ns;
 
         for i in 0 to 100 loop
-            dbg_7seg( seg, an, dp ); 
+            work.debug_utils.dbg_7seg( seg, an, dp ); 
             wait for 50 ns;
         end loop;
 
