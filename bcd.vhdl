@@ -48,6 +48,7 @@ architecture bcd_encoder_arch of bcd_encoder is
         return bcd;
     end to_bcd;
 
+    signal internal_bcd_out : std_logic_vector(11 downto 0) := (others=>'0');
 begin
 
     convert_to_bcd : process(clk) is
@@ -55,8 +56,11 @@ begin
         if rst='1' then
             -- todo
         elsif rising_edge(clk) then
-            bcd_out <= to_bcd( byte_in);
+            internal_bcd_out <= to_bcd( byte_in);
+--            internal_bcd_out <= "000100100011"; -- "123"
         end if;
+
+        bcd_out <= internal_bcd_out;
     end process convert_to_bcd;
 
 end architecture bcd_encoder_arch;
