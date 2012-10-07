@@ -15,6 +15,8 @@ entity digits_to_7seg is
     -- signals in Basys2
     port(  mclk : in std_logic;
 
+            byte_in : in std_logic_vector(7 downto 0);
+
             -- 7seg display
             seg : out std_logic_vector(6 downto 0 );
 
@@ -28,7 +30,7 @@ end entity digits_to_7seg;
 
 architecture run_digits_to_7seg of digits_to_7seg is
 
-    signal byte_in : std_logic_vector(7 downto 0 );
+--    signal byte_in : std_logic_vector(7 downto 0 );
 
     -- bcd out to 7seg encoder in
     signal bcd_outnibble0 : std_logic_vector (3 downto 0);
@@ -89,13 +91,13 @@ begin
     -- hardwire decimal point for now
     dp <= '0';
 
-    byte_in <= "11111111";
+--    byte_in <= "11111111";
 --    byte_in <= "00101010"; -- d'42
 
     -- the actual divider will be 2.1e6 or so (25Mhz down to 15hz)
     run_divider : clk_divider
---        generic map(clkmax => 4) -- simulation
-        generic map(clkmax => 50000) -- synthesis
+        generic map(clkmax => 4) -- simulation
+--        generic map(clkmax => 50000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
                 clk_out => divider_out_7segmuxor_in );
