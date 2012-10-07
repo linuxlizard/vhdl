@@ -117,7 +117,7 @@ begin
     sevenseg_digit3 : SevenSegmentEncoder 
         port map ( rst => rst,
                     ck => mclk,
-                    nibble => "0011",
+                    nibble => "0111",
                     seg => out7seg3
                 );
 
