@@ -12,7 +12,7 @@ switch_to_7seg.o : switch_to_7seg.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
     
 
-test_digits_to_7seg : test_digits_to_7seg.o digits_to_7seg.o
+test_digits_to_7seg : bcd.o test_digits_to_7seg.o digits_to_7seg.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 
 test_digits_to_7seg.o : test_digits_to_7seg.vhdl

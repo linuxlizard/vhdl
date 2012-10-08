@@ -57,7 +57,8 @@ architecture run_digits_to_7seg of digits_to_7seg is
         port (rst : in std_logic;
               clk : in std_logic;
               byte_in : in std_logic_vector(7 downto 0 );
-              bcd_out : out std_logic_vector( 11 downto 0 )
+              bcd_out : out std_logic_vector( 11 downto 0 );
+              negative_out : out std_logic
              );
     end component bcd_encoder;
 
@@ -89,7 +90,7 @@ begin
     rst <= '0';
 
     -- hardwire decimal point for now
-    dp <= '0';
+--    dp <= '0';
 
 --    byte_in <= "11111111";
 --    byte_in <= "00101010"; -- d'42
@@ -109,7 +110,8 @@ begin
                    -- bcd is 12 digits so split into 3 groups of 4
                    bcd_out(11 downto 8) =>  bcd_outnibble0,
                    bcd_out( 7 downto 4) =>  bcd_outnibble1,
-                   bcd_out( 3 downto 0) =>  bcd_outnibble2 
+                   bcd_out( 3 downto 0) =>  bcd_outnibble2,
+                   negative_out => dp
                 );
 
     -- hardcode the most sig digit to 0 for now (will be 0/1 to indicate regw,

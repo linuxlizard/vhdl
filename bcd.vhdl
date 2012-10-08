@@ -5,13 +5,16 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 use ieee.std_logic_textio.all;
+
+-- using std_logic_unsigned for the to_bcd() function below
 use ieee.std_logic_unsigned.all;
 
 entity bcd_encoder is
     port (rst : in std_logic;
           clk : in std_logic;
           byte_in : in std_logic_vector(7 downto 0 );
-          bcd_out : out std_logic_vector( 11 downto 0 )
+          bcd_out : out std_logic_vector( 11 downto 0 );
+          negative_out : out std_logic
          );
 end entity bcd_encoder;
 
@@ -49,18 +52,39 @@ architecture bcd_encoder_arch of bcd_encoder is
     end to_bcd;
 
     signal internal_bcd_out : std_logic_vector(11 downto 0) := (others=>'0');
+    signal internal_negative_out : std_logic := '0';
+    signal num : unsigned(7 downto 0) := (others=>'0');
 begin
 
     convert_to_bcd : process(clk) is
+        variable str : line;
     begin
         if rst='1' then
             -- todo
         elsif rising_edge(clk) then
-            internal_bcd_out <= to_bcd( byte_in);
+            -- if high bit set, assume is negative number. Take two's
+            -- complement, turn that into positive. Send sign bit out with the
+            -- encoded value
+            if byte_in > 127 then
+                -- convert from negative to positive
+--                num <= (unsigned(not byte_in)) + 1;
+--                bcd_out <= to_bcd(std_logic_vector(num));
+                bcd_out <= to_bcd(std_logic_vector((unsigned(not byte_in)) + 1));
+                negative_out <= '1';
+--                internal_bcd_out <= to_bcd( std_logic_vector(num) );
+--                internal_negative_out <= '1';
+            else 
+                bcd_out <= to_bcd(byte_in);
+                negative_out <= '0';
+--                internal_bcd_out <= to_bcd(byte_in);
+--                internal_negative_out <= '0';
+            end if;
+
 --            internal_bcd_out <= "000100100011"; -- "123"
         end if;
 
-        bcd_out <= internal_bcd_out;
+--        bcd_out <= internal_bcd_out;
+--        negative_out <= internal_negative_out;
     end process convert_to_bcd;
 
 end architecture bcd_encoder_arch;
