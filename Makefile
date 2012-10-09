@@ -1,6 +1,25 @@
 all : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_basys2 test_digits_to_7seg\
-        test_switch_to_7seg
+        test_switch_to_7seg test_alu test_alu_wrapper
+
+test_alu_wrapper : opcodes.o alu_wrapper.o test_alu_wrapper.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+test_alu_wrapper.o : test_alu_wrapper.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+alu_wrapper.o : alu_wrapper.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+
+test_alu : dbg.o opcodes.o alu.o test_alu.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+test_alu.o : test_alu.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+alu.o : alu.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+opcodes.o : opcodes.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
 
 test_switch_to_7seg : test_switch_to_7seg.o switch_to_7seg.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -44,7 +63,7 @@ regrotate.o : regrotate.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
 
-test_ssegmuxor : test_ssegmuxor.o ssegmuxor.o divider.o dbg.o
+test_ssegmuxor : dbg.o test_ssegmuxor.o ssegmuxor.o divider.o 
 	ghdl -m --ieee=synopsys -fexplicit $@
 
 #test_ssegmuxor : test_ssegmuxor.o ssegmuxor.o divider.o dbg.o
