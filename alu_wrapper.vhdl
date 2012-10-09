@@ -9,7 +9,9 @@ entity alu_wrapper is
             btn : in std_logic_vector(3 downto 0);
              sw : in std_logic_vector(7 downto 0);
 
-            result : out std_logic_vector (7 downto 0 );
+            wreg_out : out std_logic_vector (7 downto 0 );
+            freg_out : out std_logic_vector (7 downto 0 );
+--            result : out std_logic_vector (7 downto 0 );
             led : out std_logic_vector (7 downto 0 )
          );
 end entity alu_wrapper;
@@ -39,9 +41,14 @@ architecture alu_wrapper_arch of alu_wrapper is
     end component d_register;
 
     signal opcode_reg_output : std_logic_vector( 4 downto 0 ) := (others=>'0');
+    signal regw_to_alu : std_logic_vector( 7 downto 0 ) := (others=>'0');
+    signal regf_to_alu : std_logic_vector( 7 downto 0 ) := (others=>'0');
+
     signal regw_output : std_logic_vector( 7 downto 0 ) := (others=>'0');
     signal regf_output : std_logic_vector( 7 downto 0 ) := (others=>'0');
 
+    signal alu_result : std_logic_vector( 7 downto 0 ) := (others=>'0');
+    signal alu_dest : std_logic := '0';
 begin
     opcode_register : d_register
        generic map( width => 5)
@@ -59,7 +66,7 @@ begin
                  input_enable => btn(1),
                  output_enable => btn(3),
                  data_in => sw,
-                 data_out => regw_output);
+                 data_out => regw_to_alu);
 
     F_register : d_register
        generic map( width => 8)
@@ -68,17 +75,37 @@ begin
                  input_enable => btn(2),
                  output_enable => btn(3),
                  data_in => sw,
-                 data_out => regf_output);
+                 data_out => regf_to_alu );
 
     run_alu : alu 
-        port map( W_Reg => regw_output,
-                  F_Reg => regf_output,
+        port map( W_Reg => regw_to_alu,
+                  F_Reg => regf_to_alu,
                   Op_Code => opcode_reg_output,
-                  Rslt => result,
-                  Dst => led(0),
+                  Rslt => alu_result,
+                  Dst => alu_dest,
                   C_Flag => led(1),
                   Z_Flag => led(2),
                   V_Flag => led(3) );
+
+    led(0) <= alu_dest;
+
+    run_alu_wrapper : process(mclk) is
+    begin
+        if rising_edge(mclk) then
+            if alu_dest='1' then
+                -- output to freg
+                regw_output <= regw_to_alu;
+                regf_output <= alu_result;
+            else  
+                -- output to wreg
+                regw_output <= alu_result;
+                regf_output <= regf_to_alu;
+            end if;
+        end if;
+    end process run_alu_wrapper;
+
+    wreg_out <= regw_output;
+    freg_out <= regf_output;
 
 end architecture alu_wrapper_arch;
 

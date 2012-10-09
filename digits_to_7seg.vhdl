@@ -15,6 +15,9 @@ entity digits_to_7seg is
     -- signals in Basys2
     port(  mclk : in std_logic;
 
+            -- first digit is a "0" or "1" for W reg or F reg
+            digit0_in : in std_logic_vector(3 downto 0 );
+
             byte_in : in std_logic_vector(7 downto 0);
 
             -- 7seg display
@@ -124,7 +127,7 @@ begin
     sevenseg_digit0 : SevenSegmentEncoder 
         port map ( rst => rst,
                     ck => mclk,
-                    nibble => "0000",
+                    nibble => digit0_in,
                     seg => out7seg0
                 );
 

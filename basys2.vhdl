@@ -76,8 +76,9 @@ begin
         rst <= '0';
         wait for 10 ns;
 
-        -- load opcode register with a ADD
-        sw <= "00000001";
+        -- load opcode register 
+        sw <= "00000001"; -- ADDWF
+--        sw <= "00000010"; -- SUB
         btn <= "0001";  -- push button 0
         wait for 10 ns;
 
@@ -85,7 +86,8 @@ begin
         wait for 10 ns;
 
         -- load W register with a value
-        sw <= "00000001";
+--        sw <= "00000001";
+        sw <= "00101010"; -- 42
         btn <= "0010";  -- push button 1
         wait for 10 ns;
 
@@ -93,7 +95,8 @@ begin
         wait for 10 ns;
 
         -- load F register with a value
-        sw <= "00000010";
+--        sw <= "00000010";
+        sw <= "00101010"; -- 42
         btn <= "0100";  -- push button 2
         wait for 10 ns;
 
@@ -111,10 +114,10 @@ begin
         -- so what do we have?
         for i in 0 to 20000 loop 
             dbgdump( led, seg, an, dp );
-            write( str, string'("led=") );
-            write( str, led );
-            writeline( output, str );
-            wait for 10 ns;
+--            write( str, string'("led=") );
+--            write( str, led );
+--            writeline( output, str );
+            wait for 40 ns;
         end loop;
 
         rst <= '1';

@@ -55,7 +55,7 @@ begin
 --         "1000000" when others;   --0
  
  
-    calculate_7seg : process(ck) is
+    calculate_7seg : process(ck,rst) is
     begin
         if rst='1' then
             -- todo?

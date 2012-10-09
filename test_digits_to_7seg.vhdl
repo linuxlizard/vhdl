@@ -35,15 +35,10 @@ architecture test_digits_to_7seg_arch of test_digits_to_7seg is
     component digits_to_7seg is
         -- signals in Basys2
         port(  mclk : in std_logic;
+            digit0_in : in std_logic_vector(3 downto 0 );
              byte_in : in std_logic_vector(7 downto 0 );
-
-                -- 7seg display
                 seg : out std_logic_vector(6 downto 0 );
-
-                -- anode of 7seg display
                 an : out std_logic_vector(3 downto 0);
-
-                -- decimal point of 7seg display
                 dp : out std_logic
             ); 
     end component digits_to_7seg;
@@ -62,6 +57,7 @@ architecture test_digits_to_7seg_arch of test_digits_to_7seg is
 begin
     run_digits_to_7seg : digits_to_7seg 
         port map ( mclk => mclk,
+                digit0_in => "0111", -- hardwire the W/F digit
                     byte_in => t_byte_in,
                     seg => seg,
                     an => an,

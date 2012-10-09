@@ -20,7 +20,7 @@ architecture regrotater_arch of regrotate is
     signal which : std_logic := '0';
     signal internal_reg_out : std_logic_vector (7 downto 0) := (others=>'0');
 begin
-    reg_rotate : process(clk) is 
+    reg_rotate : process(clk,reset) is 
     begin
         if reset='1' then
             which <= '0';
