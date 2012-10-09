@@ -221,6 +221,7 @@ begin
             Z_Flag <= '0';
           end if;
           Rslt <= int_result;
+          Dst <= DST_F;
 
         when IORWF =>
           int_result := W_Reg or F_reg;
@@ -229,7 +230,9 @@ begin
           else   
             Z_Flag <= '0';
           end if;
+--          Rslt <= W_Reg or F_reg;
           Rslt <= int_result;
+          Dst <= DST_F;
 
         when XORWF =>
           int_result := W_Reg xor F_reg;
@@ -239,6 +242,7 @@ begin
             Z_Flag <= '0';
           end if;
           Rslt <= int_result;
+          Dst <= DST_F;
 
         when COMF =>
           int_result := not F_Reg;
@@ -276,6 +280,7 @@ begin
           else 
               C_Flag <= '0';
           end if;     
+          Dst <= DST_F;
        
           -- assignment statement will use the previous value of int_c_flag because the above 
           -- signal assignment takes effect at the end of the process.
