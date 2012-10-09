@@ -111,6 +111,7 @@ begin
         port map ( rst => rst,
                     clk => mclk, 
                     byte_in => byte_in,
+--                    byte_in => "11111100",
                    -- bcd is 12 digits so split into 3 groups of 4
                    bcd_out(11 downto 8) =>  bcd_outnibble0,
                    bcd_out( 7 downto 4) =>  bcd_outnibble1,
@@ -120,35 +121,35 @@ begin
 
     -- hardcode the most sig digit to 0 for now (will be 0/1 to indicate regw,
     -- regf once the real deal is implemented)
-    sevenseg_digit3 : SevenSegmentEncoder 
+    sevenseg_digit0 : SevenSegmentEncoder 
         port map ( rst => rst,
                     ck => mclk,
-                    nibble => "0111",
-                    seg => out7seg3
+                    nibble => "0000",
+                    seg => out7seg0
                 );
 
-    sevenseg_digit2 : SevenSegmentEncoder
+    sevenseg_digit3 : SevenSegmentEncoder
         port map ( rst => rst,
                     ck => mclk,
 --                    nibble => "0010",
                     nibble => bcd_outnibble2,
-                    seg => out7seg2 
+                    seg => out7seg3
                 );
     
-    sevenseg_digit1 : SevenSegmentEncoder
+    sevenseg_digit2 : SevenSegmentEncoder
         port map ( rst => rst,
                     ck => mclk,
 --                    nibble => "0001",
                     nibble => bcd_outnibble1,
-                    seg => out7seg1 
+                    seg => out7seg2 
                 );
 
-    sevenseg_digit0 : SevenSegmentEncoder
+    sevenseg_digit1 : SevenSegmentEncoder
         port map ( rst => rst,
                     ck => mclk,
 --                    nibble => "0000",
                     nibble => bcd_outnibble0,
-                    seg => out7seg0 
+                    seg => out7seg1
                 );
 
     sevenseg_muxor : ssegmuxor
@@ -160,8 +161,9 @@ begin
                     digit_3 => out7seg3,
                     is_negative => bcd_is_negative,
 
---                    digit_0 => "1111001",
---                    digit_1 => "0100100",
+--                    is_negative => '1',
+--                   digit_0 => "1111001",
+--                   digit_1 => "0100100",
 --                    digit_2 => "0110000",
 --                    digit_3 => "0011001",
 
