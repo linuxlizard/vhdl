@@ -21,22 +21,14 @@ end alu;
   
 architecture alu_arch of alu is
  
+    constant DST_W : std_logic := '0';
+    constant DST_F : std_logic := '1';
+
   -- internal copy of the Carry flag used during rotate functions
   signal int_c_flag : std_logic := '0';
-  signal int_result : std_logic_vector(7 downto 0 );
-  signal add_enable : std_logic;
-  signal c_flag_out : std_logic;
-  
-  signal active : std_logic := '0';
-
---  component ripple_adder is
---    port( A : in std_logic_vector(7 downto 0 );
---          B : in std_logic_vector(7 downto 0 );
---          Carry_in : in std_logic;
---          ready_in : in std_logic;
---          Sum : out std_logic_vector(7 downto 0 );
---          Carry_out : out std_logic );
---  end component;
+  signal tmp_add_result : std_logic_vector(8 downto 0 );
+  signal tmp_result : std_logic_vector(7 downto 0 );
+--  signal c_flag_out : std_logic;
   
   subtype bbyte is std_logic_vector(7 downto 0);
   -- function can only return one value so encode with Carry in MSB, 
@@ -115,21 +107,17 @@ architecture alu_arch of alu is
 
 begin
 
---MyRippleAdder : ripple_adder 
---   port map( W_Reg, F_Reg, int_c_flag, add_enable, int_result, c_flag_out );
-         
     RunALU : process( W_Reg, F_Reg, Op_Code )
 
       variable op_msb : std_logic;
       variable op : std_logic_vector(4 downto 0);
       variable int_result : std_logic_vector(7 downto 0);
       variable add_result : carry_and_byte;
-      variable twos_compliment : std_logic_vector(7 downto 0);
-
+--      variable twos_compliment : std_logic_vector(7 downto 0);
+        
+      variable prev_int_c_flag : std_logic := '0';
     begin
         report "opcode";
-
-        active <= '1';
 
         -- strip the MSB for reasons I'm not too sure of yet
         op_msb := OP_Code(4);
@@ -140,18 +128,26 @@ begin
           -- do nothing
 
         when ADDWF =>
+--          prev_int_c_flag := int_c_flag;
+
           -- http://dev.code.ultimater.net/electronics/8-bit-full-adder-and-subtractor/
           -- https://en.wikipedia.org/wiki/Adder_(electronics)
           -- http://books.google.com/books?id=PZkDpS4m0fMC&pg=PA180#v=onepage&q&f=false
           add_result := ripple_adder( W_Reg, F_Reg, ( 0=>int_c_flag, others=>'0' ) );
           int_result := add_result(7 downto 0);
+          tmp_add_result <= add_result;
+
+--          V_Flag <=  prev_int_c_flag and int_c_flag;
+
           C_Flag <= add_result(8);         
+          int_c_flag <= add_result(8);  
           if int_result="00000000" then
             Z_Flag <= '1';
           else   
             Z_Flag <= '0';
           end if;
           Rslt <= int_result;
+          Dst <= DST_F;
                 
         when SUBWF =>
           -- two's compliment of W = (~W)+1
@@ -163,23 +159,27 @@ begin
           add_result := ripple_adder( int_result, F_reg, (others=>'0') );
           -- laboriously extract the results 
           int_result := add_result(7 downto 0);
-          C_Flag <= add_result(8);
+          --C_Flag <= add_result(8);
+          C_Flag <= '0'; -- not sure what carry means in subtraction
           if int_result="00000000" then
             Z_Flag <= '1';
           else   
             Z_Flag <= '0';
           end if;
           Rslt <= int_result;
+          Dst <= DST_F;
                 
         when SWAPF =>
           int_result := ( F_Reg(3), F_Reg(2), F_Reg(1), F_Reg(0),
                    F_Reg(7), F_Reg(6), F_Reg(5), F_Reg(4) );
           Rslt <= int_result;
+          Dst <= DST_F;
           
         when PASW =>
           int_result := W_reg;
           -- PASW doesn't touch the Z_Flag
           Rslt <= int_result;
+          Dst <= DST_W;
                   
         when PASF =>
           int_result := F_reg;
@@ -189,6 +189,7 @@ begin
             Z_Flag <= '0';
           end if;
           Rslt <= int_result;
+          Dst <= DST_F;
             
         when INCF =>
           add_result := ripple_adder( "00000001", F_Reg, ( others=>'0' ) );
@@ -199,6 +200,7 @@ begin
             Z_Flag <= '0';
           end if;
           Rslt <= int_result;
+          Dst <= DST_F;
 
         when DECF =>
           add_result := ripple_adder( "11111111", F_Reg, ( others=>'0' ) );
@@ -209,6 +211,7 @@ begin
             Z_Flag <= '0';
           end if;
           Rslt <= int_result;
+          Dst <= DST_F;
                         
         when ANDWF =>
           int_result := W_Reg and F_reg;  
@@ -245,23 +248,24 @@ begin
             Z_Flag <= '0';
           end if;
           Rslt <= int_result;
+          Dst <= DST_F;
           
         when RLCF =>
           -- rotate left through carry flag
-          int_c_flag <= F_Reg(7);
-         
           if F_Reg(7)='1' then
               C_Flag <= '1';
           else 
               C_Flag <= '0';
           end if;     
-          Rslt <= int_result;
-       
           -- assignment statement will use the previous value of int_c_flag because the above 
           -- signal assignment takes effect at the end of the process.
-          int_result := ( F_Reg(6), F_Reg(5), F_Reg(4), F_Reg(3), F_Reg(2), F_Reg(1), F_Reg(0),
-                  int_c_flag );
-          Rslt <= int_result;
+--          int_result := ( F_Reg(6), F_Reg(5), F_Reg(4), F_Reg(3), F_Reg(2), F_Reg(1), F_Reg(0),
+ --                          int_c_flag );
+          Rslt <= ( F_Reg(6), F_Reg(5), F_Reg(4), F_Reg(3), F_Reg(2), F_Reg(1), F_Reg(0),
+                           int_c_flag );
+          int_c_flag <= F_Reg(7);
+--          Rslt <= int_result;
+          Dst <= DST_F;
                 
         when RRCF =>
           -- rotate right through carry flag
@@ -275,9 +279,13 @@ begin
        
           -- assignment statement will use the previous value of int_c_flag because the above 
           -- signal assignment takes effect at the end of the process.
-          int_result := ( int_c_flag, 
-                   F_Reg(7), F_Reg(6), F_Reg(5), F_Reg(4), F_Reg(3), F_Reg(2), F_Reg(1) );
-          Rslt <= int_result;
+--          int_result := ( int_c_flag, 
+--                         F_Reg(7), F_Reg(6), F_Reg(5), F_Reg(4), F_Reg(3), F_Reg(2), F_Reg(1) );
+          Rslt <= ( int_c_flag, 
+                         F_Reg(7), F_Reg(6), F_Reg(5), F_Reg(4), F_Reg(3), F_Reg(2), F_Reg(1) );
+          int_c_flag <= F_Reg(0);
+--          Rslt <= int_result;
+          Dst <= DST_F;
                                     
         when SARF =>
           -- shift arithmetic right (preserves sign bit)
@@ -291,6 +299,7 @@ begin
             Z_Flag <= '0';
           end if;            
           Rslt <= int_result;
+          Dst <= DST_F;
         
         when CLR =>
           Z_Flag <= '0';
@@ -298,14 +307,13 @@ begin
           V_Flag <= '0';
           Rslt <= (others=>'0');
           Dst <= '0';
+          int_c_flag <= '0';
 
         when others => 
     --      report "unknown opcodeopcode?" severity FAILURE;
           int_result := "01010101";
         end case;
      
-        active <= '0';
-
     end process RunALU;
  
 end alu_arch;
