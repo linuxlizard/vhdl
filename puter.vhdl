@@ -80,7 +80,9 @@ begin
 
     -- the actual divider will be 125e6 or so (25Mhz down to 0.20hz)
     run_rotate_divider : clk_divider
-        generic map(clkmax => 8) -- simulation
+        -- this value must be >>> the 7seg display divider so we have a
+        -- stable-ish signal to the 7seg display
+        generic map(clkmax => 64) -- simulation
 --        generic map(clkmax => 125000000) -- synthesis
         port map( clk_in => mclk,
                 reset => '0',

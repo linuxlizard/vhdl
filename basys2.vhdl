@@ -77,8 +77,8 @@ begin
         wait for 10 ns;
 
         -- load opcode register 
-        sw <= "00000001"; -- ADDWF
---        sw <= "00000010"; -- SUB
+--        sw <= "00000001"; -- ADDWF
+        sw <= "00000010"; -- SUB
         btn <= "0001";  -- push button 0
         wait for 10 ns;
 
@@ -86,8 +86,8 @@ begin
         wait for 10 ns;
 
         -- load W register with a value
---        sw <= "00000001";
-        sw <= "00101010"; -- 42
+        sw <= "00000010";
+--        sw <= "00101010"; -- 42
         btn <= "0010";  -- push button 1
         wait for 10 ns;
 
@@ -95,8 +95,8 @@ begin
         wait for 10 ns;
 
         -- load F register with a value
---        sw <= "00000010";
-        sw <= "00101010"; -- 42
+        sw <= "00000001";
+--        sw <= "00101010"; -- 42
         btn <= "0100";  -- push button 2
         wait for 10 ns;
 
@@ -117,6 +117,11 @@ begin
 --            write( str, string'("led=") );
 --            write( str, led );
 --            writeline( output, str );
+            
+            -- sample 2x the 7seg display rate; in simulation
+            -- clock period is 20ns. 7seg divider is 4 so 7seg period is 80ns ;
+            -- sample @ Nyquist just so I can show off I know what Nyquist
+            -- means
             wait for 40 ns;
         end loop;
 
