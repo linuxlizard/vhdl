@@ -67,24 +67,24 @@ begin
             -- encoded value
             if byte_in > 127 then
                 -- convert from negative to positive
---                num <= (unsigned(not byte_in)) + 1;
---                bcd_out <= to_bcd(std_logic_vector(num));
-                bcd_out <= to_bcd(std_logic_vector((unsigned(not byte_in)) + 1));
-                negative_out <= '1';
---                internal_bcd_out <= to_bcd( std_logic_vector(num) );
---                internal_negative_out <= '1';
+--                bcd_out <= to_bcd(std_logic_vector((unsigned(not byte_in)) + 1));
+--                negative_out <= '1';
+                internal_bcd_out <= to_bcd(std_logic_vector((unsigned(not byte_in)) + 1));
+                internal_negative_out <= '1';
             else 
-                bcd_out <= to_bcd(byte_in);
-                negative_out <= '0';
---                internal_bcd_out <= to_bcd(byte_in);
---                internal_negative_out <= '0';
+--                bcd_out <= to_bcd(byte_in);
+--                negative_out <= '0';
+                internal_bcd_out <= to_bcd(byte_in);
+                internal_negative_out <= '0';
             end if;
 
 --            internal_bcd_out <= "000100100011"; -- "123"
         end if;
-
---        bcd_out <= internal_bcd_out;
---        negative_out <= internal_negative_out;
+		
+--        bcd_out <= "000100100011";
+--        negative_out <= '1';
+        bcd_out <= internal_bcd_out;
+        negative_out <= internal_negative_out;
     end process convert_to_bcd;
 
 end architecture bcd_encoder_arch;
