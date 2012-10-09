@@ -24,9 +24,11 @@ architecture run_test_ssegmuxor of test_ssegmuxor is
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
                 digit_3 : in std_logic_vector (6 downto 0 );
+            is_negative : in std_logic;
 
                 anode_out : out std_logic_vector (3 downto 0 );
-                digit_out : out std_logic_vector (6 downto 0 ) 
+                digit_out : out std_logic_vector (6 downto 0 ); 
+                   dp_out : out std_logic
             );
     end component ssegmuxor;
 
@@ -37,9 +39,11 @@ architecture run_test_ssegmuxor of test_ssegmuxor is
     signal t_digit_1 : std_logic_vector (6 downto 0);
     signal t_digit_2 : std_logic_vector (6 downto 0);
     signal t_digit_3 : std_logic_vector (6 downto 0);
+    signal t_is_negative : std_logic := '0';
 
     signal t_anode_out : std_logic_vector (3 downto 0);
     signal t_digit_out : std_logic_vector (6 downto 0);
+    signal t_dp_out : std_logic;
 
 begin
     seg_muxor_input_clock : clk_divider
@@ -55,8 +59,11 @@ begin
                   digit_1 => t_digit_1,
                   digit_2 => t_digit_2,
                   digit_3 => t_digit_3,
+                  is_negative => t_is_negative,
                   anode_out => t_anode_out,
-                  digit_out => t_digit_out );
+                  digit_out => t_digit_out,
+                  dp_out => t_dp_out
+                );
 
     clock : process is 
     begin
@@ -68,14 +75,16 @@ begin
         variable str : line;
         variable i : integer;
     begin
+        write( str, string'("Hello, world") );
+        writeline( output, str );
+
         t_rst <= '1';
         -- 2, 4, 6, 8 encodings for 7-seg
         t_digit_0 <= "0100100";
         t_digit_1 <= "0011001";
         t_digit_2 <= "0000010";
         t_digit_3 <= "0000000";
-        write( str, string'("Hello, world") );
-        writeline( output, str );
+        t_is_negative <= '1';
         wait for 15 ns;
 
         t_rst <= '0';
@@ -87,8 +96,10 @@ begin
             write( str, work.debug_utils.sevenseg_to_integer(t_digit_out) );
             write( str, string'(" ") );
             write( str, t_anode_out );
+            write( str, string'(" dp=") );
+            write( str, t_dp_out);
             writeline( output, str );
-            wait for 10 ns;
+            wait for 50 ns;
         end loop;
 
         wait;

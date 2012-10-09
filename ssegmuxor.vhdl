@@ -13,9 +13,11 @@ entity ssegmuxor is
             digit_1 : in std_logic_vector (6 downto 0 );
             digit_2 : in std_logic_vector (6 downto 0 );
             digit_3 : in std_logic_vector (6 downto 0 );
+        is_negative : in std_logic;
 
             anode_out : out std_logic_vector (3 downto 0 );
-            digit_out : out std_logic_vector (6 downto 0 ) 
+            digit_out : out std_logic_vector (6 downto 0 );
+            dp_out : out std_logic
         );
 
 end entity ssegmuxor;
@@ -24,6 +26,7 @@ architecture clk_ssegmuxor_arch of ssegmuxor is
     signal counter : integer := 0;
     signal internal_anode_out : std_logic_vector(3 downto 0) := "0000";
     signal internal_digit_out : std_logic_vector(6 downto 0) := "0000000";
+    signal internal_dp_out : std_logic := '0';
 begin
     behavior : process(clk) is
     begin
@@ -36,29 +39,35 @@ begin
                     internal_digit_out <= digit_0;
 --                    internal_digit_out <= "1111001";  -- 1
                     counter <= 1;
+                    internal_dp_out <= not is_negative;
                 when 1 =>
                     internal_anode_out <= "1011";
                     internal_digit_out <= digit_1;
 --                    digit_out <= "0100100";  -- 2
                     counter <= 2;
+                    internal_dp_out <= '1';
                 when 2 =>
                     internal_anode_out <= "1101";
                     internal_digit_out <= digit_2;
+                    internal_dp_out <= '1';
 --                    digit_out <= "0110000";  -- 3
                     counter <= 3;
                 when 3 =>
                     internal_anode_out <= "1110";
                     internal_digit_out <= digit_3;
+                    internal_dp_out <= '1';
 --                    digit_out <= "0011001";  -- 4
                     counter <= 0;
                 when others =>
                     internal_anode_out <= "0000";
                     internal_digit_out <= "1111111";
+                    internal_dp_out <= '1';
             end case;
         end if;
 
         digit_out <= internal_digit_out;
         anode_out <= internal_anode_out;
+        dp_out <= internal_dp_out;
     end process behavior;
 end architecture clk_ssegmuxor_arch;
 

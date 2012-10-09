@@ -69,9 +69,11 @@ architecture run_digits_to_7seg of digits_to_7seg is
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
                 digit_3 : in std_logic_vector (6 downto 0 );
+        is_negative : in std_logic;
 
                 anode_out : out std_logic_vector (3 downto 0 );
-                digit_out : out std_logic_vector (6 downto 0 ) 
+                digit_out : out std_logic_vector (6 downto 0 ) ;
+            dp_out : out std_logic
             );
     end component ssegmuxor;
 
@@ -83,7 +85,9 @@ architecture run_digits_to_7seg of digits_to_7seg is
           );
     end component SevenSegmentEncoder;
 
-    signal rst : std_logic;
+    signal rst : std_logic:='0';
+
+    signal bcd_is_negative : std_logic:='0';
 
 begin
     -- future compatibility for an incoming reset signal
@@ -111,7 +115,7 @@ begin
                    bcd_out(11 downto 8) =>  bcd_outnibble0,
                    bcd_out( 7 downto 4) =>  bcd_outnibble1,
                    bcd_out( 3 downto 0) =>  bcd_outnibble2,
-                   negative_out => dp
+                   negative_out => bcd_is_negative 
                 );
 
     -- hardcode the most sig digit to 0 for now (will be 0/1 to indicate regw,
@@ -154,12 +158,16 @@ begin
                     digit_1 => out7seg1,
                     digit_2 => out7seg2,
                     digit_3 => out7seg3,
+                    is_negative => bcd_is_negative,
+
 --                    digit_0 => "1111001",
 --                    digit_1 => "0100100",
 --                    digit_2 => "0110000",
 --                    digit_3 => "0011001",
+
                     anode_out => an, -- 7segment display anode
-                    digit_out => seg -- 7segment display segment
+                    digit_out => seg, -- 7segment display segment
+                    dp_out => dp -- decimal point
                 );
 
 end architecture run_digits_to_7seg;
