@@ -62,27 +62,23 @@ begin
         if rst='1' then
             -- todo
         elsif rising_edge(clk) then
-            -- if high bit set, assume is negative number. Take two's
-            -- complement, turn that into positive. Send sign bit out with the
-            -- encoded value
-            if byte_in > 127 then
-                -- convert from negative to positive
---                bcd_out <= to_bcd(std_logic_vector((unsigned(not byte_in)) + 1));
---                negative_out <= '1';
-                internal_bcd_out <= to_bcd(std_logic_vector((unsigned(not byte_in)) + 1));
-                internal_negative_out <= '1';
-            else 
---                bcd_out <= to_bcd(byte_in);
---                negative_out <= '0';
-                internal_bcd_out <= to_bcd(byte_in);
-                internal_negative_out <= '0';
-            end if;
-
---            internal_bcd_out <= "000100100011"; -- "123"
+		  
+--            -- if high bit set, assume is negative number. Take two's
+--            -- complement, turn that into positive. Send sign bit out with the
+--            -- encoded value
+--            if byte_in > 127 then
+--                -- convert from negative to positive
+--                internal_bcd_out <= to_bcd(std_logic_vector((unsigned(not byte_in)) + 1));
+--                internal_negative_out <= '1';
+--            else 
+--                internal_bcd_out <= to_bcd(byte_in);
+--                internal_negative_out <= '0';
+--            end if;
+            internal_bcd_out <= to_bcd(byte_in);
+            internal_negative_out <= '0';
+				
         end if;
 		
---        bcd_out <= "000100100011";
---        negative_out <= '1';
         bcd_out <= internal_bcd_out;
         negative_out <= internal_negative_out;
     end process convert_to_bcd;
