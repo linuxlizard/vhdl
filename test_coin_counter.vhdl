@@ -13,7 +13,6 @@ architecture test_coin_counter_arch of test_coin_counter is
 
     -- inputs
     signal mclk :  std_logic := '0';
-    signal rst : std_logic := '0';
     signal btn: std_logic_vector(3 downto 0) := (others=>'0');
     signal sw :  std_logic_vector(7 downto 0) := (others=>'0');
 
@@ -69,7 +68,6 @@ begin
         write( str, string'("hello, world") );
         writeline( output, str );
 
-        rst <= '1';
         btn <= "0000";
         sw <= "00000001"; -- switch 0 is a reset
         wait for 15 ns;
