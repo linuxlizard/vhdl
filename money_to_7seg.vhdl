@@ -194,7 +194,9 @@ begin
         -- we select which digits are active and where the decimal point is
         -- here to reflect a base-10 money system
         if rising_edge(mclk) then
-            if word_in="0000000000000000" then
+--            if word_in="0000000000000000" then
+            if word_in=X"0000" then
+                -- fmt "__0.0"
                 -- output hardwired to "  0.0"
                 display_mask <= "0011";
                 dp_mask_in <= "0010";
@@ -202,7 +204,9 @@ begin
                 sseg_digit1_in <= "1000000";
                 sseg_digit2_in <= "1000000";
                 sseg_digit3_in <= "1000000";
-            elsif word_in < "0000000001100100" then  -- < d'100
+--            elsif word_in < "0000001111101000" then  -- < d'1000
+            elsif word_in < X"03e8" then  -- < d'1000
+                -- fmt "_n.nn"
                 display_mask <= "0111";
                 dp_mask_in <= "0100";
                 sseg_digit0_in <= "1000000"; -- "0" (shouldn't be seen) 
@@ -210,6 +214,8 @@ begin
                 sseg_digit2_in <= out7seg2;
                 sseg_digit3_in <= out7seg3;
             else 
+                -- fmt "nn.nn"
+                -- use all four digits and the decimal is at position 2
                 display_mask <= "1111";
                 dp_mask_in <= "0100";
                 sseg_digit0_in <= out7seg0;
