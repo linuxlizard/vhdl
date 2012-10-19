@@ -1,3 +1,5 @@
+-- davep 18-Oct-2012 ; remove negative
+
 -- http://vhdlguru.blogspot.com/2010/04/8-bit-binary-to-bcd-converter-double.html
 library ieee;
 
@@ -13,8 +15,7 @@ entity bcd_encoder is
     port (rst : in std_logic;
           clk : in std_logic;
           word_in : in std_logic_vector(15 downto 0 );
-          bcd_out : out std_logic_vector( 19 downto 0 );
-          negative_out : out std_logic
+          bcd_out : out std_logic_vector( 19 downto 0 )
          );
 end entity bcd_encoder;
 
@@ -60,7 +61,7 @@ architecture bcd_encoder_arch of bcd_encoder is
     end to_bcd;
 
     signal internal_bcd_out : std_logic_vector(19 downto 0) := (others=>'0');
-    signal internal_negative_out : std_logic := '0';
+--    signal internal_negative_out : std_logic := '0';
     signal num : unsigned(7 downto 0) := (others=>'0');
 begin
 
@@ -68,7 +69,7 @@ begin
         variable str : line;
     begin
         if rst='1' then
-            -- todo
+            internal_bcd_out <= (others=>'0');
         elsif rising_edge(clk) then
 		  
 --            -- if high bit set, assume is negative number. Take two's
@@ -83,12 +84,12 @@ begin
 --                internal_negative_out <= '0';
 --            end if;
             internal_bcd_out <= to_bcd(word_in);
-            internal_negative_out <= '0';
+--            internal_negative_out <= '0';
 				
         end if;
 		
         bcd_out <= internal_bcd_out;
-        negative_out <= internal_negative_out;
+--        negative_out <= internal_negative_out;
     end process convert_to_bcd;
 
 end architecture bcd_encoder_arch;

@@ -34,8 +34,7 @@ architecture puter_arch of puter is
     component digits_to_7seg is
         -- signals in Basys2
         port(  mclk : in std_logic;
-            digit0_in : in std_logic_vector(3 downto 0);
-             byte_in : in std_logic_vector(7 downto 0 );
+             word_in : in std_logic_vector(15 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
                 dp : out std_logic
@@ -68,6 +67,8 @@ architecture puter_arch of puter is
     signal rotater_clock_in : std_logic := '0';
 
     signal digit_zero_or_one : std_logic_vector( 3 downto 0 ) := (others=>'0');
+
+    signal rotater_to_word : std_logic_vector( 15 downto 0 ) := (others=>'0');
 begin
     run_alu_wrapper : alu_wrapper
         port map( mclk => mclk,
@@ -112,13 +113,16 @@ begin
 
     run_digits_to_7seg : digits_to_7seg
         port map ( mclk => mclk,
-                digit0_in => digit_zero_or_one,
-                    byte_in => rotater_out,
+                    word_in => rotater_to_word,
 --                    byte_in => "11111110",
                     seg => seg,
                     an => an,
                     dp => dp 
                 );
+
+    -- davep 18-Oct-2012 ; 7-sig display bumped to 16-bits but I'm going to
+    -- leave this code as 8-bit
+    rotater_to_word <= ("00000000" & rotater_out);
 
 end architecture puter_arch;
 

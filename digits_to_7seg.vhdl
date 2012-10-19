@@ -15,10 +15,7 @@ entity digits_to_7seg is
     -- signals in Basys2
     port(  mclk : in std_logic;
 
-            -- first digit is a "0" or "1" for W reg or F reg
-            digit0_in : in std_logic_vector(3 downto 0 );
-
-            byte_in : in std_logic_vector(7 downto 0);
+            word_in : in std_logic_vector(15 downto 0);
 
             -- 7seg display
             seg : out std_logic_vector(6 downto 0 );
@@ -39,6 +36,8 @@ architecture run_digits_to_7seg of digits_to_7seg is
     signal bcd_outnibble0 : std_logic_vector (3 downto 0);
     signal bcd_outnibble1 : std_logic_vector (3 downto 0);
     signal bcd_outnibble2 : std_logic_vector (3 downto 0);
+    signal bcd_outnibble3 : std_logic_vector (3 downto 0);
+    signal bcd_outnibble4 : std_logic_vector (3 downto 0);
 
     -- 7seg encoder out to 7segmuxor in 
     signal out7seg0 : std_logic_vector (6 downto 0 );
@@ -59,9 +58,8 @@ architecture run_digits_to_7seg of digits_to_7seg is
     component bcd_encoder is
         port (rst : in std_logic;
               clk : in std_logic;
-              byte_in : in std_logic_vector(7 downto 0 );
-              bcd_out : out std_logic_vector( 11 downto 0 );
-              negative_out : out std_logic
+              word_in : in std_logic_vector(15 downto 0 );
+              bcd_out : out std_logic_vector( 19 downto 0 )
              );
     end component bcd_encoder;
 
@@ -72,7 +70,7 @@ architecture run_digits_to_7seg of digits_to_7seg is
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
                 digit_3 : in std_logic_vector (6 downto 0 );
-        is_negative : in std_logic;
+   decimal_point_mask : in std_logic_vector(3 downto 0 );
 
                 anode_out : out std_logic_vector (3 downto 0 );
                 digit_out : out std_logic_vector (6 downto 0 ) ;
@@ -113,29 +111,22 @@ begin
     run_bcd_encoder : bcd_encoder
         port map ( rst => rst,
                     clk => mclk, 
-                    byte_in => byte_in,
+                    word_in => word_in,
 --                    byte_in => "11111100",
-                   -- bcd is 12 digits so split into 3 groups of 4
-                   bcd_out(11 downto 8) =>  bcd_outnibble0,
+                   -- bcd is 20 digits so split into 5 groups of 4
+                   bcd_out(19 downto 16) =>  bcd_outnibble4,
+                   bcd_out(15 downto 12) =>  bcd_outnibble3,
+                   bcd_out(11 downto 8) =>  bcd_outnibble2,
                    bcd_out( 7 downto 4) =>  bcd_outnibble1,
-                   bcd_out( 3 downto 0) =>  bcd_outnibble2,
-                   negative_out => bcd_is_negative 
+                   bcd_out( 3 downto 0) =>  bcd_outnibble0
                 );
 
-    -- hardcode the most sig digit to 0 for now (will be 0/1 to indicate regw,
-    -- regf once the real deal is implemented)
-    sevenseg_digit0 : SevenSegmentEncoder 
-        port map ( rst => rst,
-                    ck => mclk,
-                    nibble => digit0_in,
-                    seg => out7seg0
-                );
-
+    -- right most digit
     sevenseg_digit3 : SevenSegmentEncoder
         port map ( rst => rst,
                     ck => mclk,
 --                    nibble => "0010",
-                    nibble => bcd_outnibble2,
+                    nibble => bcd_outnibble0,
                     seg => out7seg3
                 );
     
@@ -151,9 +142,18 @@ begin
         port map ( rst => rst,
                     ck => mclk,
 --                    nibble => "0000",
-                    nibble => bcd_outnibble0,
+                    nibble => bcd_outnibble2,
                     seg => out7seg1
                 );
+
+    -- left most digit
+    sevenseg_digit0 : SevenSegmentEncoder 
+        port map ( rst => rst,
+                    ck => mclk,
+                    nibble => bcd_outnibble3,
+                    seg => out7seg0
+                );
+
 
     sevenseg_muxor : ssegmuxor
         port map ( reset => rst,
@@ -162,7 +162,7 @@ begin
                     digit_1 => out7seg1,
                     digit_2 => out7seg2,
                     digit_3 => out7seg3,
-                    is_negative => bcd_is_negative,
+         decimal_point_mask => "0000",
 
 --                    is_negative => '1',
 --                   digit_0 => "1111001",

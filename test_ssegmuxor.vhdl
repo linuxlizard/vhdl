@@ -24,7 +24,7 @@ architecture run_test_ssegmuxor of test_ssegmuxor is
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
                 digit_3 : in std_logic_vector (6 downto 0 );
-            is_negative : in std_logic;
+     decimal_point_mask : in std_logic_vector(3 downto 0 );
 
                 anode_out : out std_logic_vector (3 downto 0 );
                 digit_out : out std_logic_vector (6 downto 0 ); 
@@ -39,7 +39,7 @@ architecture run_test_ssegmuxor of test_ssegmuxor is
     signal t_digit_1 : std_logic_vector (6 downto 0);
     signal t_digit_2 : std_logic_vector (6 downto 0);
     signal t_digit_3 : std_logic_vector (6 downto 0);
-    signal t_is_negative : std_logic := '0';
+    signal t_decimal_point_mask : std_logic_vector (3 downto 0 ) := (others=>'0');
 
     signal t_anode_out : std_logic_vector (3 downto 0);
     signal t_digit_out : std_logic_vector (6 downto 0);
@@ -59,7 +59,7 @@ begin
                   digit_1 => t_digit_1,
                   digit_2 => t_digit_2,
                   digit_3 => t_digit_3,
-                  is_negative => t_is_negative,
+                  decimal_point_mask => t_decimal_point_mask,
                   anode_out => t_anode_out,
                   digit_out => t_digit_out,
                   dp_out => t_dp_out
@@ -84,7 +84,7 @@ begin
         t_digit_1 <= "0011001";
         t_digit_2 <= "0000010";
         t_digit_3 <= "0000000";
-        t_is_negative <= '1';
+        t_decimal_point_mask <= "1000";
         wait for 15 ns;
 
         t_rst <= '0';

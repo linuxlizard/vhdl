@@ -30,13 +30,12 @@ architecture test_digits_to_7seg_arch of test_digits_to_7seg is
     -- decimal point of 7seg display
     signal dp : std_logic := '0';
 
-    signal t_byte_in : std_logic_vector( 7 downto 0 ) := "00000000";
+    signal t_word_in : std_logic_vector( 15 downto 0 ) := (others=>'0');
 
     component digits_to_7seg is
         -- signals in Basys2
         port(  mclk : in std_logic;
-            digit0_in : in std_logic_vector(3 downto 0 );
-             byte_in : in std_logic_vector(7 downto 0 );
+             word_in : in std_logic_vector(15 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
                 dp : out std_logic
@@ -57,8 +56,7 @@ architecture test_digits_to_7seg_arch of test_digits_to_7seg is
 begin
     run_digits_to_7seg : digits_to_7seg 
         port map ( mclk => mclk,
-                digit0_in => "0111", -- hardwire the W/F digit
-                    byte_in => t_byte_in,
+                    word_in => t_word_in,
                     seg => seg,
                     an => an,
                     dp => dp );
@@ -80,7 +78,8 @@ begin
         wait for 15 ns;
 
         rst <= '0';
-        t_byte_in <= "10000000";
+        t_word_in <= std_logic_vector(to_unsigned(12345,16));
+--        t_word_in <= std_logic_vector(to_unsigned(65535,16));
         wait for 10 ns;
 
         for i in 0 to 255 loop
