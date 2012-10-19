@@ -35,12 +35,12 @@ package body debug_utils is
          when "1111000" => return 7; -- 0x78
          when "0000000" => return 8; -- 0x00
          when "0010000" => return 9; -- 0x10
-         when "0001000" => return 16#A#;
-         when "0000011" => return 16#b#;
-         when "1000110" => return 16#C#;
-         when "0100001" => return 16#d#;
-         when "0000110" => return 16#E#;
-         when "0001110" => return 16#F#;
+         when "0001000" => return 16#A#; -- 0x08
+         when "0000011" => return 16#b#; -- 0x03
+         when "1000110" => return 16#C#; -- 0x46
+         when "0100001" => return 16#d#; -- 0x21
+         when "0000110" => return 16#E#; -- 0x06
+         when "0001110" => return 16#F#; -- 0x07
          when "1000000" => return 0; -- 0x40
          when others => return -1;            
         end case;
