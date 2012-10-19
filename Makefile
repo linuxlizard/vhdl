@@ -1,6 +1,14 @@
 all : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_basys2 test_digits_to_7seg\
-        test_alu basys2 test_money_to_7seg test_hex_to_7seg test_coin_counter
+        test_alu basys2 test_money_to_7seg test_hex_to_7seg test_coin_counter\
+        tb_Edge_to_Pulse
+
+tb_Edge_to_Pulse : edge_to_pulse.o tb_Edge_to_Pulse.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+tb_Edge_to_Pulse.o : tb_Edge_to_Pulse.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+edge_to_pulse.o : edge_to_pulse.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
 
 basys2 : alu_wrapper.o digits_to_7seg.o puter.o basys2.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -9,7 +17,8 @@ basys2.o : basys2.vhdl
 puter.o : puter.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
-test_coin_counter : coin_counter.o test_coin_counter.o money_to_7seg.o
+test_coin_counter : coin_counter.o test_coin_counter.o money_to_7seg.o\
+                    edge_to_pulse.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 test_coin_counter.o : test_coin_counter.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
