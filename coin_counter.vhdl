@@ -22,6 +22,17 @@ architecture coin_counter_arch of coin_counter is
 
     signal counter : unsigned (15 downto 0 ) := (others=>'0');
 
+    signal coin_100_in : std_logic;
+    signal coin_25_in : std_logic;
+    signal coin_10_in : std_logic;
+
+    component edge_to_pulse is
+        Port ( CLK : in  STD_LOGIC;
+               Reset : in  STD_LOGIC;
+               Edge_in : in  STD_LOGIC;
+               Pulse_out : out  STD_LOGIC);
+    end component;
+
     component money_to_7seg is
         -- signals in Basys2
         port(  mclk : in std_logic;
@@ -41,17 +52,35 @@ begin
                     an => an,
                     dp => dp );
 
+    coin_10_edge_to_pulse : edge_to_pulse
+        port map ( CLK => mclk,
+                   Reset => reset,
+                   Edge_in => btn(2),
+                   Pulse_out => coin_10_in );
+
+    coin_25_edge_to_pulse : edge_to_pulse
+        port map ( CLK => mclk,
+                   Reset => reset,
+                   Edge_in => btn(1),
+                   Pulse_out => coin_25_in );
+
+    coin_100_edge_to_pulse : edge_to_pulse
+        port map ( CLK => mclk,
+                   Reset => reset,
+                   Edge_in => btn(0),
+                   Pulse_out => coin_100_in );
+
     run_coin_counter : process(mclk,reset) is
     begin
         if reset='1' then
             total_money <= (others=>'0');
         elsif rising_edge(mclk) then
             -- do stuff
-            if btn(0)='1' then
+            if coin_100_in = '1' then
                 counter <= counter + 100;
-            elsif btn(1)='1' then
+            elsif coin_25_in = '1' then
                 counter <= counter + 25;
-            elsif btn(2)='1' then
+            elsif coin_10_in = '1' then
                 counter <= counter + 10;
             end if;
 
