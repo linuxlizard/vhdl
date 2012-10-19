@@ -53,37 +53,6 @@ architecture test_money_to_7seg_arch of test_money_to_7seg is
         );
     end component d_register;
 
-    procedure display_loop( seg : std_logic_vector(6 downto 0 );
-                         an : std_logic_vector(3 downto 0);
-                         dp : std_logic ) is
-        variable i : integer;
-        variable num : integer;
-        variable total : integer;
-        variable str : line;
-    begin
-        total := 0;
-        num := 0;
-        for i in 0 to 12 loop
-            work.debug_utils.dbg_7seg( seg, an, dp ); 
-            num := work.debug_utils.sevenseg_to_integer( seg );
-
-            if an = "0111" then
-                num := num * 1000;
-            elsif an = "1011" then
-                num := num * 100;
-            elsif an = "1101" then
-                num := num * 10;
-            end if;
---            total := std_logic_vector(to_unsigned(total,16)) or std_logic_vector(to_unsigned(num,16));
---            write( str, string'("total="));
---            write( str, total );
---            writeline(output,str); 
-
-            
-            wait for 50 ns;
-        end loop;
-    end procedure display_loop;
-
 begin
     run_money_to_7seg : money_to_7seg 
         port map ( mclk => mclk,
@@ -111,21 +80,24 @@ begin
         rst <= '0';
         wait for 10 ns;
 
-        t_word_in <= std_logic_vector(to_unsigned(90,16));
+        t_word_in <= std_logic_vector(to_unsigned(100,16));
         wait for 10 ns;
-        display_loop( seg, an, dp );
+        for i in 0 to 255 loop
+            work.debug_utils.dbg_7seg( seg, an, dp ); 
+            wait for 50 ns;
+        end loop;
 
-        t_word_in <= std_logic_vector(to_unsigned(0,16));
-        wait for 10 ns;
-        display_loop( seg, an, dp );
+--        t_word_in <= std_logic_vector(to_unsigned(0,16));
+--        wait for 10 ns;
+--        display_loop( seg, an, dp );
 
-        t_word_in <= std_logic_vector(to_unsigned(2345,16));
-        wait for 10 ns;
-        display_loop( seg, an, dp );
+--        t_word_in <= std_logic_vector(to_unsigned(2345,16));
+--        wait for 10 ns;
+--        display_loop( seg, an, dp );
 
-        t_word_in <= std_logic_vector(to_unsigned(65535,16));
-        wait for 10 ns;
-        display_loop( seg, an, dp );
+--        t_word_in <= std_logic_vector(to_unsigned(65535,16));
+--        wait for 10 ns;
+--        display_loop( seg, an, dp );
 
         wait;
     end process stimulus;
