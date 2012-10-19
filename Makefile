@@ -1,6 +1,6 @@
 all : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_basys2 test_digits_to_7seg\
-        test_switch_to_7seg test_alu test_alu_wrapper basys2
+        test_alu basys2
 
 basys2 : alu_wrapper.o digits_to_7seg.o puter.o basys2.o
 	ghdl -m --ieee=synopsys -fexplicit $@
