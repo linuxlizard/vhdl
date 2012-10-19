@@ -32,6 +32,20 @@ architecture test_coin_counter_arch of test_coin_counter is
                 dp : out std_logic
             ); 
     end component coin_counter;
+
+    function add_coin ( value : in integer ) return std_logic_vector is 
+    begin
+        if value=10 then
+            return "0100";
+        elsif value=25 then
+            return "0010";
+        elsif value=100 then
+            return "0001";
+        else 
+            -- TODO halt somehow
+            return "1111";
+        end if;
+    end;
 begin
     uut_coin_counter : coin_counter
         port map (
@@ -63,12 +77,16 @@ begin
         sw <= "00000000"; -- release reset
         wait for 10 ns;
 
-        btn <= "0001";  -- $1
-        wait for 10 ns;
+        btn <= add_coin( 100);
+        -- leave it pressed for a looong time
+        wait for 100 ns;
 
-        btn <= "0000";  -- release
-        wait for 10 ns;
+        btn <= add_coin( 10 );
+        -- leave it pressed for a looong time
+        wait for 100 ns;
 
+        btn <= add_coin( 25 );
+        -- leave it pressed for a looong time
         wait for 100 ns;
 
         for i in 0 to 255 loop
