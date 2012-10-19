@@ -71,7 +71,10 @@ begin
 
         wait for 100 ns;
 
-        work.debug_utils.dbg_7seg_loop( seg, an, dp ); 
+        for i in 0 to 255 loop
+            work.debug_utils.dbg_7seg( seg, an, dp ); 
+            wait for 50 ns;
+        end loop;
 
         wait;
     end process stimulus;
