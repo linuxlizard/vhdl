@@ -17,7 +17,6 @@ end entity basys2;
 architecture basys2_arch of basys2 is 
     -- use the same names as the actual hardware
     signal mclk :  std_logic;
-    signal rst : std_logic;
     signal btn: std_logic_vector(3 downto 0) := (others=>'0');
     signal sw :  std_logic_vector(7 downto 0) := (others=>'0');
     signal led: std_logic_vector(7 downto 0) := (others=>'0');
@@ -71,12 +70,11 @@ begin
         write( str, string'("hello, world") );
         writeline( output, str );
 
-        rst <= '1';
         btn <= "0000";
-        sw <= "00000000";
-        wait for 15 ns;
+        sw <= "00000001";
+        wait for 55 ns;
 
-        rst <= '0';
+        sw <= "00000000";
         wait for 10 ns;
 
         -- so what do we have?
@@ -93,7 +91,6 @@ begin
             wait for 40 ns;
         end loop;
 
-        rst <= '1';
         wait for 10 ns;
 
        wait;
