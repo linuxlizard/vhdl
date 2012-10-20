@@ -22,16 +22,16 @@ architecture basys2_arch of basys2 is
     signal an : std_logic_vector( 3 downto 0 ) := (others=>'0');
     signal dp : std_logic;
 
-    component puter is 
+    component subway_tickets is 
         port(  mclk : in std_logic;
                 btn : in std_logic_vector(3 downto 0);
-                 sw : in std_logic_vector(7 downto 0);
+                sw : in std_logic_vector(7 downto 0);
                 led : out std_logic_vector( 7 downto 0 );
                 seg : out std_logic_vector( 6 downto 0 );
-               an : out std_logic_vector( 3 downto 0 );
+                an : out std_logic_vector( 3 downto 0 );
                 dp : out std_logic
             ); 
-    end component puter;
+    end component subway_tickets;
 
     procedure dbgdump( 
                 led : in std_logic_vector( 7 downto 0 );
@@ -76,40 +76,6 @@ begin
         rst <= '0';
         wait for 10 ns;
 
-        -- load opcode register 
---        sw <= "00000001"; -- ADDWF
-        sw <= "00000010"; -- SUB
-        btn <= "0001";  -- push button 0
-        wait for 10 ns;
-
-        btn <= "0000"; -- release button 0
-        wait for 10 ns;
-
-        -- load W register with a value
-        sw <= "00000010";
---        sw <= "00101010"; -- 42
-        btn <= "0010";  -- push button 1
-        wait for 10 ns;
-
-        btn <= "0000"; -- release button 1
-        wait for 10 ns;
-
-        -- load F register with a value
-        sw <= "00000001";
---        sw <= "00101010"; -- 42
-        btn <= "0100";  -- push button 2
-        wait for 10 ns;
-
-        btn <= "0000"; -- release button 1
-        wait for 10 ns;
-
-        -- register1 and register2 should now hold values
-        -- push button 3 to output the registers' values to the rotater
-        btn <= "1000";
-        wait for 10 ns;
-        btn <= "0000";
-        wait for 10 ns;
-        dbgdump( led, seg, an, dp );
 
         -- so what do we have?
         for i in 0 to 20000 loop 
