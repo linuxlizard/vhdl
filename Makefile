@@ -1,6 +1,6 @@
 all : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_basys2 test_digits_to_7seg\
-        test_alu basys2 test_money_to_7seg
+        test_alu basys2 test_money_to_7seg test_hex_to_7seg
 
 basys2 : alu_wrapper.o digits_to_7seg.o puter.o basys2.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -38,7 +38,19 @@ switch_to_7seg.o : switch_to_7seg.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
     
 
-test_money_to_7seg : bcd.o test_money_to_7seg.o money_to_7seg.o
+test_hex_to_7seg : bcd.o test_hex_to_7seg.o hex_to_7seg.o sevenseg.o\
+                    ssegmuxor.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+test_hex_to_7seg.o : test_hex_to_7seg.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+hex_to_7seg.o : hex_to_7seg.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+
+test_money_to_7seg : bcd.o test_money_to_7seg.o money_to_7seg.o sevenseg.o\
+                    ssegmuxor.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 
 test_money_to_7seg.o : test_money_to_7seg.vhdl
