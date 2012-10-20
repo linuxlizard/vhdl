@@ -1,3 +1,8 @@
+-- Display ticket choices. User scrolls through choices with button0 and
+-- button1
+--
+-- Users choses zone with btn3.
+
 -- davep 19-Oct-2012
 
 library ieee;
@@ -5,6 +10,9 @@ use ieee.std_logic_1164.ALL;
 use ieee.numeric_std.all;
 use std.textio.all;
 use ieee.std_logic_textio.all;
+
+library work;
+use work.ticketzones.all;
 
 entity ticket_display is
     port( reset : in std_logic; 
@@ -14,7 +22,7 @@ entity ticket_display is
             seg : out std_logic_vector( 6 downto 0 );
             an : out std_logic_vector( 3 downto 0 );
             dp : out std_logic;
-            zone_choice : out unsigned ( 1 downto 0 )
+            zone_choice : out std_logic_vector ( 1 downto 0 )
         ); 
 end entity ticket_display;
 
@@ -37,7 +45,9 @@ architecture ticket_display_arch of ticket_display is
     end component;
 
     component hex_to_7seg is
-        port(  mclk : in std_logic;
+        generic (display_mask_param : std_logic_vector(3 downto 0));
+        port(  rst : in std_logic;
+                mclk : in std_logic;
              word_in : in std_logic_vector(15 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
@@ -65,7 +75,10 @@ begin
                    Pulse_out => btn_3_pushed );
 
     run_hex_to_7seg : hex_to_7seg 
-        port map ( mclk => mclk,
+        -- ticket display needs one digit
+        generic map (display_mask_param => "1000" )
+        port map ( rst => reset,
+                    mclk => mclk,
                     word_in => zone_display_out,
                     seg => seg,
                     an => an,
@@ -77,6 +90,7 @@ begin
         if reset='1' then
             zone_display_out <= X"a000";
             current_pos := 0;
+            zone_choice <= zone_invalid;
         elsif rising_edge(mclk) then
             if btn_0_pushed='1' and current_pos /= 0 then
                 -- up
@@ -86,9 +100,15 @@ begin
                 current_pos := current_pos +1;
             elsif btn_3_pushed='1' then
                 -- selection chosen
-
-            else
-                
+                if current_pos = 0 then
+                    zone_choice <= zone_a;
+                elsif current_pos = 1 then
+                    zone_choice <= zone_b;
+                elsif current_pos = 2 then
+                    zone_choice <= zone_c;
+                else
+                    zone_choice <= zone_invalid;
+                end if;
             end if;
 
             if current_pos = 0 then
@@ -100,9 +120,6 @@ begin
             else 
                 zone_display_out <= X"ffff";
             end if;
-
-            -- TODO
-            zone_choice <= to_unsigned(0,2);
 
         end if;
             

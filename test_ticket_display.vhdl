@@ -17,7 +17,7 @@ architecture test_ticket_display_arch of test_ticket_display is
     signal btn: std_logic_vector(3 downto 0) := (others=>'0');
     signal sw :  std_logic_vector(7 downto 0) := (others=>'0');
 
-    signal user_zone_choice : unsigned (1 downto 0);
+    signal user_zone_choice : std_logic_vector (1 downto 0);
 
     -- outputs
     signal led: std_logic_vector(7 downto 0);
@@ -33,7 +33,7 @@ architecture test_ticket_display_arch of test_ticket_display is
                 seg : out std_logic_vector( 6 downto 0 );
                 an : out std_logic_vector( 3 downto 0 );
                 dp : out std_logic;
-                zone_choice : out unsigned(1 downto 0 )
+                zone_choice : out std_logic_vector(1 downto 0 )
             ); 
     end component ticket_display;
 
@@ -134,6 +134,23 @@ begin
             work.debug_utils.dbg_7seg( seg, an, dp ); 
             wait for 50 ns;
         end loop;
+
+        -- press select
+        write( str, string'("press select (btn3)"));
+        writeline(output,str);
+        btn <= "1000"; -- select 
+        wait for 20 ns;
+        btn <= "0000"; -- clear
+        wait for 100 ns; -- wait for result to percolate to 7seg 
+        for i in 0 to 4 loop
+            work.debug_utils.dbg_7seg( seg, an, dp ); 
+            wait for 50 ns;
+        end loop;
+
+        write( str, string'("user select="));
+        write( str, user_zone_choice );
+        writeline( output, str );
+
         wait;
     end process stimulus;
 end architecture test_ticket_display_arch;
