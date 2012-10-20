@@ -40,6 +40,7 @@ begin
             reset => sw(0),
             mclk => mclk,
             btn => btn,
+            led => led,
             seg => seg,
             an => an,
             dp => dp,
