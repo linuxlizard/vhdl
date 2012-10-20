@@ -2,7 +2,7 @@ all : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_digits_to_7seg\
         test_money_to_7seg test_hex_to_7seg test_coin_counter\
         tb_edge_to_pulse test_ticket_display test_ticket_dispense\
-        test_ticket_counter
+        test_ticket_counter subway_tickets
 
 tb_edge_to_pulse : edge_to_pulse.o tb_Edge_to_Pulse.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -11,13 +11,19 @@ tb_Edge_to_Pulse.o : tb_Edge_to_Pulse.vhdl
 edge_to_pulse.o : edge_to_pulse.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
-basys2 : alu_wrapper.o digits_to_7seg.o puter.o basys2.o
+subway_tickets : subway_tickets.o digits_to_7seg.o  basys2.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 basys2.o : basys2.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
-puter.o : puter.vhdl
+subway_tickets.o : subway_tickets.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
+#test_basys2_mux : basys2_mux.o test_basys2_mux.o
+#	ghdl -m --ieee=synopsys -fexplicit $@
+#basys2_mux.o : basys2_mux.vhdl
+#	ghdl -a --ieee=synopsys -fexplicit $<
+#test_basys2_mux.o : test_basys2_mux.vhdl
+#	ghdl -a --ieee=synopsys -fexplicit $<
 
 test_ticket_dispense : ticketzones.o ticket_dispense.o \
                             test_ticket_dispense.o hex_to_7seg.o
