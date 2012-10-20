@@ -16,6 +16,10 @@ package debug_utils is
                          an : std_logic_vector(3 downto 0);
                          dp : std_logic );
 
+  procedure dbg_7seg_loop( seg : std_logic_vector(6 downto 0 );
+                            an : std_logic_vector(3 downto 0);
+                            dp : std_logic );
+
 end package debug_utils;
 
 
@@ -61,6 +65,18 @@ package body debug_utils is
         write( str, dp );
         writeline(output,str);
     end procedure dbg_7seg;
+
+    procedure dbg_7seg_loop( seg : std_logic_vector(6 downto 0 );
+                         an : std_logic_vector(3 downto 0);
+                         dp : std_logic ) is
+        variable i : integer;
+        variable str : line;
+    begin
+        for i in 0 to 12 loop
+            work.debug_utils.dbg_7seg( seg, an, dp ); 
+            wait for 50 ns;
+        end loop;
+    end procedure dbg_7seg_loop;
 
 end package body debug_utils;
 
