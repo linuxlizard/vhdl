@@ -30,6 +30,9 @@ architecture ticket_dispense_arch of ticket_dispense is
     signal down : std_logic;
 
     signal display_out : std_logic_vector(15 downto 0);
+    signal display_mask : std_logic_vector(3 downto 0) := "1100";
+
+    signal blink_clock : std_logic := '0';
 
     component edge_to_pulse is
         Port ( CLK : in  STD_LOGIC;
@@ -39,24 +42,39 @@ architecture ticket_dispense_arch of ticket_dispense is
     end component;
 
     component hex_to_7seg is
-        generic (display_mask_param : std_logic_vector(3 downto 0));
         port(  rst : in std_logic;
                 mclk : in std_logic;
                 word_in : in std_logic_vector(15 downto 0 );
+                display_mask_in : in std_logic_vector (3 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
                 dp : out std_logic
             ); 
     end component hex_to_7seg;
 
+    component clk_divider is
+        generic (clkmax : integer);
+        port ( reset : in std_logic;
+               clk_in : in std_logic;
+               clk_out : out std_logic );
+    end component clk_divider;
+
 begin
 
+    divider : clk_divider
+--        generic map(clkmax => 8) -- simulation
+        generic map(clkmax => 125000000) -- synthesis
+        port map( clk_in => mclk,
+                reset => reset,
+                clk_out => blink_clock );
+
     run_hex_to_7seg : hex_to_7seg 
-        -- ticket dispense needs two digits
-        generic map (display_mask_param => "1100" )
         port map ( rst => reset,
                     mclk => mclk,
                     word_in => display_out,
+                    -- ticket dispense needs two digits or no digits for
+                    -- blinking
+                    display_mask_in => display_mask,
                     seg => seg,
                     an => an,
                     dp => dp );
@@ -65,6 +83,7 @@ begin
     begin
         if reset='1' then
             display_out <= X"0000";
+            display_mask <= "1100";
         elsif rising_edge(mclk) then
             -- create a 16-bit value for display:
             --  four bits "A" 
@@ -83,6 +102,16 @@ begin
             else
                 display_out <= X"ffff";
             end if;
+
+            -- blink by turning entire segment on/off
+            if blink_clock='0' then
+                -- digits on
+                display_mask <= "1100";
+            else 
+                -- digits off
+                display_mask <= "0000";
+            end if;
+
         end if;
             
     end process run_ticket_dispense;
