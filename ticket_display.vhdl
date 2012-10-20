@@ -79,7 +79,7 @@ begin
                     mclk => mclk,
                     word_in => zone_display_out,
                     -- ticket display needs one digit
-                    display_mas_in => "1000",
+                    display_mask_in => "1000",
                     seg => seg,
                     an => an,
                     dp => dp );
