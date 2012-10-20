@@ -34,7 +34,8 @@ architecture test_digits_to_7seg_arch of test_digits_to_7seg is
 
     component digits_to_7seg is
         -- signals in Basys2
-        port(  mclk : in std_logic;
+        port(  rst : in std_logic; 
+                mclk : in std_logic;
              word_in : in std_logic_vector(15 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
@@ -55,7 +56,8 @@ architecture test_digits_to_7seg_arch of test_digits_to_7seg is
 
 begin
     run_digits_to_7seg : digits_to_7seg 
-        port map ( mclk => mclk,
+        port map ( rst => rst,
+                    mclk => mclk,
                     word_in => t_word_in,
                     seg => seg,
                     an => an,

@@ -33,8 +33,9 @@ architecture puter_arch of puter is
 
     component digits_to_7seg is
         -- signals in Basys2
-        port(  mclk : in std_logic;
-             word_in : in std_logic_vector(15 downto 0 );
+        port(  rst : in std_logic;
+                mclk : in std_logic;
+                word_in : in std_logic_vector(15 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
                 dp : out std_logic
@@ -112,7 +113,8 @@ begin
     end process run_puter;
 
     run_digits_to_7seg : digits_to_7seg
-        port map ( mclk => mclk,
+        port map ( rst => '0', -- TODO
+                    mclk => mclk,
                     word_in => rotater_to_word,
 --                    byte_in => "11111110",
                     seg => seg,

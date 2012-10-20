@@ -13,7 +13,9 @@ use ieee.std_logic_textio.all;
 
 entity digits_to_7seg is
     -- signals in Basys2
-    port(  mclk : in std_logic;
+    port(   rst : in std_logic;
+
+            mclk : in std_logic;
 
             word_in : in std_logic_vector(15 downto 0);
 
@@ -66,12 +68,12 @@ architecture run_digits_to_7seg of digits_to_7seg is
     component ssegmuxor is
         port (  reset : in std_logic;
                 clk : in std_logic;
-    display_mask : in std_logic_vector( 3 downto 0 );
+                display_mask : in std_logic_vector( 3 downto 0 );
                 digit_0 : in std_logic_vector (6 downto 0 );
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
                 digit_3 : in std_logic_vector (6 downto 0 );
-   decimal_point_mask : in std_logic_vector(3 downto 0 );
+                decimal_point_mask : in std_logic_vector(3 downto 0 );
 
                 anode_out : out std_logic_vector (3 downto 0 );
                 digit_out : out std_logic_vector (6 downto 0 ) ;
@@ -87,14 +89,9 @@ architecture run_digits_to_7seg of digits_to_7seg is
           );
     end component SevenSegmentEncoder;
 
-    signal rst : std_logic:='0';
-
     signal bcd_is_negative : std_logic:='0';
 
 begin
-    -- future compatibility for an incoming reset signal
-    rst <= '0';
-
     -- hardwire decimal point for now
 --    dp <= '0';
 
@@ -164,7 +161,7 @@ begin
                     digit_1 => out7seg1,
                     digit_2 => out7seg2,
                     digit_3 => out7seg3,
-         decimal_point_mask => "0000",
+                    decimal_point_mask => "0000",
 
 --                    is_negative => '1',
 --                   digit_0 => "1111001",
