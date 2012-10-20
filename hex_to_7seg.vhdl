@@ -15,17 +15,18 @@ use ieee.std_logic_textio.all;
 
 entity hex_to_7seg is
 
-    -- want to use the same hex display for both the ticket selector and the
-    -- ticket dispensor. The ticket selector uses 1 digit and the ticket
-    -- dispensor uses 2 digits
-    generic (display_mask_param: std_logic_vector(3 downto 0) );
-
     -- signals in Basys2
     port(  rst : in std_logic;
 
             mclk : in std_logic;
 
             word_in : in std_logic_vector(15 downto 0);
+
+            -- want to use the same hex display for both the ticket selector and the
+            -- ticket dispensor. The ticket selector uses 1 digit and the ticket
+            -- dispensor uses 2 digits
+
+            display_mask_in : in std_logic_vector (3 downto 0 );
 
             -- 7seg display
             seg : out std_logic_vector(6 downto 0 );
@@ -127,7 +128,7 @@ begin
     sevenseg_muxor : ssegmuxor
         port map (  reset => rst,
                     clk => divider_out_7segmuxor_in,
-                    display_mask => display_mask_param, -- want left-most digit only
+                    display_mask => display_mask_in, -- want left-most digit only
                     digit_0 => out7seg0,
                     digit_1 => out7seg1,
                     digit_2 => out7seg2,
