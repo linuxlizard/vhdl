@@ -7,6 +7,9 @@ use ieee.numeric_std.all;
 use std.textio.all;
 use ieee.std_logic_textio.all;
 
+library work;
+use work.ticketzones.all;
+
 entity subway_tickets is 
     port(  mclk : in std_logic;
             btn : in std_logic_vector(3 downto 0);
@@ -26,8 +29,9 @@ architecture subway_tickets_arch of subway_tickets is
         STATE_TICKET_COUNTER,
         STATE_MONEY_CHECK,
         STATE_TICKET_DISPENSE,
-        STATE_CHANGE_DISPENSE,
-       
+        STATE_WAIT_3_SECONDS,
+        STATE_RETURN_CHANGE,
+
         STATE_RESET_0,
         STATE_RESET_1,
         STATE_RESET_2
@@ -36,13 +40,14 @@ architecture subway_tickets_arch of subway_tickets is
 
     signal current_state, next_state : state_type := STATE_START;
     
-    signal reset : std_logic := '0';
+    signal reset : std_logic := '1';
 
-    signal btn_3_pushed : std_logic;
+    signal btn_3_pushed : std_logic := '0';
 
-    signal user_total_money : std_logic_vector(15 downto 0);
-    signal user_zone_choice : std_logic_vector(1 downto 0 );
+    signal user_total_money : std_logic_vector(15 downto 0) := (others=>'0');
+    signal user_zone_choice : std_logic_vector(1 downto 0 ) := (others=>'0');
     signal user_ticket_count : std_logic_vector (2 downto 0) := (others=>'0');
+    signal user_change_due : std_logic_vector(15 downto 0) := (others=>'0');
 
     type basys2_io is record
             reset : std_logic;
@@ -58,6 +63,7 @@ architecture subway_tickets_arch of subway_tickets is
     signal ticket_chooser_io: basys2_io;
     signal ticket_counter_io: basys2_io;
     signal ticket_dispense_io: basys2_io;
+    signal display_change_io: basys2_io;
 
     component edge_to_pulse is
         Port ( CLK : in  STD_LOGIC;
@@ -104,13 +110,89 @@ architecture subway_tickets_arch of subway_tickets is
         port( reset : in std_logic; 
                 mclk : in std_logic;
                 zone_choice : in std_logic_vector (1 downto 0 );
-                ticket_count : in unsigned (2 downto 0);
+                ticket_count : in std_logic_vector (2 downto 0);
 
                 seg : out std_logic_vector( 6 downto 0 );
                 an : out std_logic_vector( 3 downto 0 );
                 dp : out std_logic
             ); 
     end component ticket_dispense;
+
+    component digits_to_7seg is
+        port(  rst : in std_logic; 
+                mclk : in std_logic;
+             word_in : in std_logic_vector(15 downto 0 );
+                seg : out std_logic_vector(6 downto 0 );
+                an : out std_logic_vector(3 downto 0);
+                dp : out std_logic
+            ); 
+    end component digits_to_7seg;
+
+    function integer_to_vector( in_num : in integer ) return std_logic_vector is
+        variable i : integer;
+        variable num : integer;
+        variable mask : integer;
+        variable str : line;
+        variable vec : std_logic_vector (15 downto 0 );
+        variable tmp : integer;
+        variable tmp2 : integer;
+    begin
+        num := in_num;
+        mask := 1;
+        vec := X"0000";
+        for i in 0 to 15 loop
+            write( str, string'("i="));
+            write( str, i );
+            writeline(output,str);
+
+            -- no logical operations on integers so we'll do it the hard way
+            -- need to test if LSb is '1' or '0'
+            tmp := num / 2;
+            tmp2 := tmp * 2;
+
+            write( str, tmp );
+            write( str, string'(" ") );
+            write( str, tmp2 );
+            writeline(output,str);
+
+            if num /= tmp2 then
+                vec(i) := '1';
+            end if;
+
+            -- can't figure out how to shift an integer so we'll do it the 
+            -- hard way
+            num := num / 2;
+            mask := mask * 2;
+        end loop;
+        return vec;
+    end;
+
+    function vector_to_integer( vec : in std_logic_vector ) return integer is
+        variable i : integer;
+        variable sum : integer;
+        variable adder : integer;
+        variable str : line;
+    begin
+--        write( str, string'("len="));
+--        write( str, vec'length );
+--        writeline( output, str );
+
+        sum := 0;
+        adder := 1;
+        for i in 1 to (vec'length) loop
+--            write( str, string'("i="));
+--            write( str, i );
+--            writeline(output,str);
+
+            if vec(i-1)='1' then
+                sum := sum + adder;
+            end if;
+            -- can't figure out how to shift an integer so we'll do it the 
+            -- hard way
+            adder := adder * 2;
+        end loop;
+        return sum;
+    end;
 
 begin
     btn_3_edge_to_pulse : edge_to_pulse
@@ -145,11 +227,31 @@ begin
             mclk => mclk,
 
             btn => ticket_counter_io.btn,
+
+            led => ticket_counter_io.led,
             seg => ticket_counter_io.seg,
             an => ticket_counter_io.an,
             dp => ticket_counter_io.dp,
             
             ticket_count => user_ticket_count );
+
+    run_ticket_dispense : ticket_dispense
+        port map (
+            reset => ticket_dispense_io.reset,
+            mclk => mclk,
+            zone_choice => user_zone_choice,
+            ticket_count => user_ticket_count,
+            seg => ticket_dispense_io.seg,
+            an => ticket_dispense_io.an,
+            dp => ticket_dispense_io.dp);
+
+    run_display_change : digits_to_7seg 
+        port map ( rst => display_change_io.reset,
+                    mclk => mclk,
+                    word_in => user_change_due,
+                    seg => display_change_io.seg,
+                    an => display_change_io.an,
+                    dp => display_change_io.dp );
 
     reset <= sw(0);
 
@@ -163,12 +265,27 @@ begin
     end process;
 
     run_subway_tickets : process(mclk,reset) 
+        variable ticket_cost : integer := 0;
+        variable required_cost : integer := 0;
+        variable cash_entered : integer := 0;
+        variable timer_countdown : integer := 0;
+        variable change_due : integer := 0;
     begin
         if reset='1' then
             coin_counter_io.reset <= '1';
             ticket_chooser_io.reset <= '1';
             ticket_counter_io.reset <= '1';
             ticket_dispense_io.reset <= '1';
+            led <= "00000000";
+            seg <= "0000000";
+            an <= "1111";
+            dp <= '1';
+
+            ticket_cost := 0;
+            required_cost := 0;
+            cash_entered := 0;
+            timer_countdown := 0;
+            change_due := 0;
 
         elsif rising_edge(mclk) then
             case current_state is
@@ -177,6 +294,7 @@ begin
                     ticket_chooser_io.reset <= '0';
                     ticket_counter_io.reset <= '0';
                     ticket_dispense_io.reset <= '0';
+                    led <= "00000000";
                     next_state <= STATE_ENTER_MONEY;
 
                 when STATE_ENTER_MONEY =>
@@ -222,14 +340,61 @@ begin
                     end if;
 
                 when STATE_MONEY_CHECK =>
-                    next_state <= STATE_TICKET_DISPENSE;
+
+                    if user_zone_choice=zone_a then
+                        ticket_cost := 100;
+                    elsif user_zone_choice=zone_b then
+                        ticket_cost := 135;
+                    elsif user_zone_choice=zone_c then
+                        ticket_cost := 245;
+                    else 
+                        ticket_cost := 999;
+                    end if;
+                    required_cost := 0;
+
+                    -- I'm caught in typecast hell so let's brute force it
+                    if user_ticket_count="001" then
+                        required_cost := ticket_cost;
+                    elsif user_ticket_count="010" then
+                        required_cost := ticket_cost+ticket_cost;
+                    elsif user_ticket_count="011" then
+                        required_cost := ticket_cost+ticket_cost+ticket_cost;
+                    else 
+                        required_cost := ticket_cost+ticket_cost+ticket_cost+ticket_cost;
+                    end if;
+
+                    cash_entered := vector_to_integer( user_total_money );
+
+                    if cash_entered < required_cost then
+                        next_state <= STATE_ENTER_MONEY;
+                        led <= "00000010";
+                    else 
+                        change_due := cash_entered - required_cost;
+                        user_change_due <= integer_to_vector(change_due);
+                        next_state <= STATE_TICKET_DISPENSE;
+                    end if;
 
                 when STATE_TICKET_DISPENSE =>
-                    next_state <= STATE_CHANGE_DISPENSE;
+                    led <= ticket_dispense_io.led;
+                    seg <= ticket_dispense_io.seg;
+                    an <= ticket_dispense_io.an;
+                    dp <= ticket_dispense_io.dp;
+                    timer_countdown := 125000000;
+                    --pragma synthesis off
+                    timer_countdown := 64;
+                    --pragma synthesis on
+                    next_state <= STATE_WAIT_3_SECONDS;
 
-                when STATE_CHANGE_DISPENSE =>
-                    
-                    next_state <= STATE_RESET_0;
+                when STATE_WAIT_3_SECONDS =>
+                    timer_countdown := timer_countdown - 1;
+                    if timer_countdown=0 then
+                        next_state <= STATE_RETURN_CHANGE;
+                    end if;
+
+                when STATE_RETURN_CHANGE =>
+                    if btn_3_pushed='1' then
+                        next_state <= STATE_RESET_0;
+                    end if;
                     
                 when STATE_RESET_0 =>
                     coin_counter_io.reset <= '1';
