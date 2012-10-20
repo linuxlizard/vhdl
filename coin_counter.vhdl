@@ -1,3 +1,4 @@
+-- Coin Counter.
 -- davep 19-Oct-2012
 
 library ieee;
@@ -35,7 +36,8 @@ architecture coin_counter_arch of coin_counter is
 
     component money_to_7seg is
         -- signals in Basys2
-        port(  mclk : in std_logic;
+        port( rst : in std_logic; 
+                mclk : in std_logic;
              word_in : in std_logic_vector(15 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
@@ -46,7 +48,8 @@ architecture coin_counter_arch of coin_counter is
 begin
 
     run_money_7seg : money_to_7seg 
-        port map ( mclk => mclk,
+        port map ( rst => reset,
+                    mclk => mclk,
                     word_in => total_money,
                     seg => seg,
                     an => an,
@@ -71,17 +74,27 @@ begin
                    Pulse_out => coin_100_in );
 
     run_coin_counter : process(mclk,reset) is
+        variable value : integer;
     begin
         if reset='1' then
             total_money <= (others=>'0');
+            counter <= (others=>'0');
         elsif rising_edge(mclk) then
             -- do stuff
+            value := 0;
             if coin_100_in = '1' then
-                counter <= counter + 100;
+--                counter <= counter + 100;
+                value := 100;
             elsif coin_25_in = '1' then
-                counter <= counter + 25;
+--                counter <= counter + 25;
+                value := 25;
             elsif coin_10_in = '1' then
-                counter <= counter + 10;
+--                counter <= counter + 10;
+                value := 10;
+            end if;
+
+            if counter + value <= 1000 then
+                counter <= counter + value;
             end if;
 
             total_money <= std_logic_vector(counter);
