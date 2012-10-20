@@ -1,7 +1,7 @@
 all : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_basys2 test_digits_to_7seg\
         test_alu basys2 test_money_to_7seg test_hex_to_7seg test_coin_counter\
-        tb_edge_to_pulse test_ticket_display
+        tb_edge_to_pulse test_ticket_display test_ticket_dispense
 
 tb_edge_to_pulse : edge_to_pulse.o tb_Edge_to_Pulse.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -18,8 +18,17 @@ puter.o : puter.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
 
-test_ticket_display : ticket_display.o test_ticket_display.o money_to_7seg.o\
-                    edge_to_pulse.o
+test_ticket_dispense : ticketzones.o ticket_dispense.o \
+                            test_ticket_dispense.o hex_to_7seg.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+test_ticket_dispense.o : test_ticket_dispense.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+ticket_dispense.o : ticket_dispense.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+
+test_ticket_display : ticketzones.o ticket_display.o test_ticket_display.o \
+                        hex_to_7seg.o edge_to_pulse.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 test_ticket_display.o : test_ticket_display.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
@@ -48,6 +57,9 @@ test_alu : dbg.o opcodes.o alu.o test_alu.o
 test_alu.o : test_alu.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 alu.o : alu.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+ticketzones.o : ticketzones.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
 opcodes.o : opcodes.vhdl
