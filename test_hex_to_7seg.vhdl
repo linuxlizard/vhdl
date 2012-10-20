@@ -33,11 +33,11 @@ architecture test_hex_to_7seg_arch of test_hex_to_7seg is
     signal t_word_in : std_logic_vector( 15 downto 0 ) := (others=>'0');
 
     component hex_to_7seg is
-        -- signals in Basys2
-        generic (display_mask_param : std_logic_vector(3 downto 0));
         port(   rst : in std_logic; 
                 mclk : in std_logic;
-             word_in : in std_logic_vector(15 downto 0 );
+                word_in : in std_logic_vector(15 downto 0 );
+                display_mask_in : in std_logic_vector (3 downto 0 );
+
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
                 dp : out std_logic
@@ -57,10 +57,10 @@ architecture test_hex_to_7seg_arch of test_hex_to_7seg is
 
 begin
     run_hex_to_7seg : hex_to_7seg 
-        generic map (display_mask_param => "1100" )
         port map ( rst => rst,
                    mclk => mclk,
                     word_in => t_word_in,
+                    display_mask_in => "1100",
                     seg => seg,
                     an => an,
                     dp => dp );
