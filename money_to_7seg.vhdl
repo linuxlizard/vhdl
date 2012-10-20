@@ -40,11 +40,17 @@ architecture run_money_to_7seg of money_to_7seg is
     signal bcd_outnibble3 : std_logic_vector (3 downto 0);
     signal bcd_outnibble4 : std_logic_vector (3 downto 0);
 
-    -- 7seg encoder out to 7segmuxor in 
+    -- 7seg encoder out to make_change in 
     signal out7seg0 : std_logic_vector (6 downto 0 );
     signal out7seg1 : std_logic_vector (6 downto 0 );
     signal out7seg2 : std_logic_vector (6 downto 0 );
     signal out7seg3 : std_logic_vector (6 downto 0 );
+
+    -- make_change out to 7segmuxor in 
+    signal sseg_digit0_in : std_logic_vector (6 downto 0 );
+    signal sseg_digit1_in : std_logic_vector (6 downto 0 );
+    signal sseg_digit2_in : std_logic_vector (6 downto 0 );
+    signal sseg_digit3_in : std_logic_vector (6 downto 0 );
 
     -- clock divider out to 7segmuxor in 
     signal divider_out_7segmuxor_in : std_logic;
@@ -75,6 +81,7 @@ architecture run_money_to_7seg of money_to_7seg is
     component ssegmuxor is
         port (  reset : in std_logic;
                 clk : in std_logic;
+    display_mask : in std_logic_vector( 3 downto 0 );
                 digit_0 : in std_logic_vector (6 downto 0 );
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
@@ -159,10 +166,15 @@ begin
     sevenseg_muxor : ssegmuxor
         port map ( reset => rst,
                     clk => divider_out_7segmuxor_in,
-                    digit_0 => out7seg0,
-                    digit_1 => out7seg1,
-                    digit_2 => out7seg2,
-                    digit_3 => out7seg3,
+                    display_mask => display_mask,
+                    digit_0 => sseg_digit0_in,
+                    digit_1 => sseg_digit1_in,
+                    digit_2 => sseg_digit2_in,
+                    digit_3 => sseg_digit3_in,
+--                    digit_0 => out7seg0,
+--                    digit_1 => out7seg1,
+--                    digit_2 => out7seg2,
+--                    digit_3 => out7seg3,
          decimal_point_mask => dp_mask_in,
 
 --                    is_negative => '1',
@@ -186,10 +198,24 @@ begin
                 -- output hardwired to "  0.0"
                 display_mask <= "0011";
                 dp_mask_in <= "0010";
+                sseg_digit0_in <= "1000000";  -- "0" (shouldn't be seen) 
+                sseg_digit1_in <= "1000000";
+                sseg_digit2_in <= "1000000";
+                sseg_digit3_in <= "1000000";
             elsif word_in < "0000000001100100" then  -- < d'100
                 display_mask <= "0111";
                 dp_mask_in <= "0100";
-
+                sseg_digit0_in <= "1000000"; -- "0" (shouldn't be seen) 
+                sseg_digit1_in <= out7seg1;
+                sseg_digit2_in <= out7seg2;
+                sseg_digit3_in <= out7seg3;
+            else 
+                display_mask <= "1111";
+                dp_mask_in <= "0100";
+                sseg_digit0_in <= out7seg0;
+                sseg_digit1_in <= out7seg1;
+                sseg_digit2_in <= out7seg2;
+                sseg_digit3_in <= out7seg3;
             end if;
         end if;
     end process make_change;
