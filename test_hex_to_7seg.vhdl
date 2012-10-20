@@ -78,7 +78,8 @@ begin
         wait for 15 ns;
 
         rst <= '0';
-        t_word_in <= std_logic_vector(to_unsigned(16#c000#,16));
+        t_word_in <= std_logic_vector(to_unsigned(16#a000#,16));
+--        t_word_in <= std_logic_vector(to_unsigned(16#c000#,16));
 --        t_word_in <= std_logic_vector(to_unsigned(65535,16));
         wait for 10 ns;
 
