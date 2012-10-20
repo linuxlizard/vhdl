@@ -11,6 +11,11 @@ tb_Edge_to_Pulse.o : tb_Edge_to_Pulse.vhdl
 edge_to_pulse.o : edge_to_pulse.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
+test_vec : test_vec.o 
+	ghdl -m --ieee=synopsys -fexplicit $@
+test_vec.o : test_vec.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
 basys2 : subway_tickets.o digits_to_7seg.o  basys2.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 basys2.o : basys2.vhdl
