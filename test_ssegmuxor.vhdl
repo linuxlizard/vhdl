@@ -20,6 +20,7 @@ architecture run_test_ssegmuxor of test_ssegmuxor is
     component ssegmuxor is
         port (  reset : in std_logic;
                 clk : in std_logic;
+    display_mask : in std_logic_vector( 3 downto 0 );
                 digit_0 : in std_logic_vector (6 downto 0 );
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
@@ -55,6 +56,7 @@ begin
     uut : ssegmuxor
         port map( reset => t_rst,
                   clk => t_seg_muxor_clock_in,
+                  display_mask => "1111",
                   digit_0 => t_digit_0,
                   digit_1 => t_digit_1,
                   digit_2 => t_digit_2,
