@@ -76,6 +76,7 @@ begin
             ticket_count <= "001";
             value := "001";
             total_tickets_to_display <= X"0001";
+            led <= (others=>'0');
         elsif rising_edge(mclk) then
             -- do stuff
             if btn_up_in = '1' and value < 4 then
