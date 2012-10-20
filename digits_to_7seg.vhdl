@@ -66,6 +66,7 @@ architecture run_digits_to_7seg of digits_to_7seg is
     component ssegmuxor is
         port (  reset : in std_logic;
                 clk : in std_logic;
+    display_mask : in std_logic_vector( 3 downto 0 );
                 digit_0 : in std_logic_vector (6 downto 0 );
                 digit_1 : in std_logic_vector (6 downto 0 );
                 digit_2 : in std_logic_vector (6 downto 0 );
@@ -158,6 +159,7 @@ begin
     sevenseg_muxor : ssegmuxor
         port map ( reset => rst,
                     clk => divider_out_7segmuxor_in,
+                    display_mask => "1111",
                     digit_0 => out7seg0,
                     digit_1 => out7seg1,
                     digit_2 => out7seg2,
