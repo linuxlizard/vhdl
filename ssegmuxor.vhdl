@@ -15,12 +15,12 @@ use ieee.numeric_std.all;
 entity ssegmuxor is
     port (  reset : in std_logic;
             clk : in std_logic;
-    display_mask : in std_logic_vector( 3 downto 0 );
+            display_mask : in std_logic_vector( 3 downto 0 );
             digit_0 : in std_logic_vector (6 downto 0 );
             digit_1 : in std_logic_vector (6 downto 0 );
             digit_2 : in std_logic_vector (6 downto 0 );
             digit_3 : in std_logic_vector (6 downto 0 );
-   decimal_point_mask : in std_logic_vector(3 downto 0 );
+            decimal_point_mask : in std_logic_vector(3 downto 0 );
 
             anode_out : out std_logic_vector (3 downto 0 );
             digit_out : out std_logic_vector (6 downto 0 );
@@ -39,6 +39,9 @@ begin
     begin
         if reset='1' then
             counter <= 0;
+            anode_out <= "1111";
+            digit_out <= (others=>'1');
+            dp_out <= '1';
         elsif rising_edge(clk) then
             case counter is
                 when 0 => 
