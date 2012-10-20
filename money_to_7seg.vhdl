@@ -16,7 +16,9 @@ use ieee.std_logic_textio.all;
 
 entity money_to_7seg is
     -- signals in Basys2
-    port(  mclk : in std_logic;
+    port( rst : in std_logic; 
+            
+            mclk : in std_logic;
 
             word_in : in std_logic_vector(15 downto 0);
 
@@ -60,8 +62,6 @@ architecture run_money_to_7seg of money_to_7seg is
 
     signal display_mask : std_logic_vector( 3 downto 0 ) := (others=>'0');
 
-    signal rst : std_logic:='0';
-
 
     component clk_divider is
         generic (clkmax : integer);
@@ -103,13 +103,10 @@ architecture run_money_to_7seg of money_to_7seg is
     end component SevenSegmentEncoder;
 
 begin
-    -- future compatibility for an incoming reset signal
-    rst <= '0';
-
     -- the actual divider will be 2.1e6 or so (25Mhz down to 15hz)
     run_divider : clk_divider
-        generic map(clkmax => 4) -- simulation
---        generic map(clkmax => 50000) -- synthesis
+--        generic map(clkmax => 4) -- simulation
+        generic map(clkmax => 50000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
                 clk_out => divider_out_7segmuxor_in );
@@ -188,18 +185,25 @@ begin
                     dp_out => dp -- decimal point
                 );
 
-    make_change : process(mclk) is 
+    make_change : process(mclk,rst) is 
     begin
+        if rst='1' then
+            display_mask <= "0011";
+            dp_mask_in <= "1101";
+            sseg_digit0_in <= "1000000";  -- "0" (shouldn't be seen) 
+            sseg_digit1_in <= "1000000";
+            sseg_digit2_in <= "1000000";
+            sseg_digit3_in <= "1000000";
+        elsif rising_edge(mclk) then
         -- incoming number is converted to bcd;
         -- we select which digits are active and where the decimal point is
         -- here to reflect a base-10 money system
-        if rising_edge(mclk) then
 --            if word_in="0000000000000000" then
             if word_in=X"0000" then
                 -- fmt "__0.0"
                 -- output hardwired to "  0.0"
                 display_mask <= "0011";
-                dp_mask_in <= "0010";
+                dp_mask_in <= "1101";
                 sseg_digit0_in <= "1000000";  -- "0" (shouldn't be seen) 
                 sseg_digit1_in <= "1000000";
                 sseg_digit2_in <= "1000000";
@@ -208,7 +212,7 @@ begin
             elsif word_in < X"03e8" then  -- < d'1000
                 -- fmt "_n.nn"
                 display_mask <= "0111";
-                dp_mask_in <= "0100";
+                dp_mask_in <= "1011";
                 sseg_digit0_in <= "1000000"; -- "0" (shouldn't be seen) 
                 sseg_digit1_in <= out7seg1;
                 sseg_digit2_in <= out7seg2;
@@ -217,7 +221,7 @@ begin
                 -- fmt "nn.nn"
                 -- use all four digits and the decimal is at position 2
                 display_mask <= "1111";
-                dp_mask_in <= "0100";
+                dp_mask_in <= "1011";
                 sseg_digit0_in <= out7seg0;
                 sseg_digit1_in <= out7seg1;
                 sseg_digit2_in <= out7seg2;
