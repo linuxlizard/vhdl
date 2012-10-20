@@ -16,7 +16,7 @@ entity ticket_dispense is
     port( reset : in std_logic; 
             mclk : in std_logic;
             zone_choice : in std_logic_vector (1 downto 0 );
-            ticket_count : in unsigned (2 downto 0);
+            ticket_count : in std_logic_vector (2 downto 0);
 
             seg : out std_logic_vector( 6 downto 0 );
             an : out std_logic_vector( 3 downto 0 );
