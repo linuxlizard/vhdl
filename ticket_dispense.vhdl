@@ -62,8 +62,10 @@ architecture ticket_dispense_arch of ticket_dispense is
 begin
 
     divider : clk_divider
---        generic map(clkmax => 8) -- simulation
-        generic map(clkmax => 125000000) -- synthesis
+--pragma synthesis off
+        generic map(clkmax => 8) -- simulation
+--pragma synthesis on
+--        generic map(clkmax => 125000000) -- synthesis
         port map( clk_in => mclk,
                 reset => reset,
                 clk_out => blink_clock );
