@@ -22,13 +22,17 @@ architecture test_coin_counter_arch of test_coin_counter is
     signal an : std_logic_vector( 3 downto 0 );
     signal dp : std_logic;
 
+    -- result of coin_counter
+    signal user_total_money : std_logic_vector(15 downto 0);
+
     component coin_counter is
         port( reset : in std_logic; 
                 mclk : in std_logic;
                 btn : in std_logic_vector(3 downto 0);
                 seg : out std_logic_vector( 6 downto 0 );
                 an : out std_logic_vector( 3 downto 0 );
-                dp : out std_logic
+                dp : out std_logic;
+                total_money : out std_logic_vector(15 downto 0 )
             ); 
     end component coin_counter;
 
@@ -53,7 +57,8 @@ begin
             btn => btn,
             seg => seg,
             an => an,
-            dp => dp );
+            dp => dp,
+            total_money => user_total_money );
 
     clock : process is
     begin
