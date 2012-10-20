@@ -1,6 +1,7 @@
 --
 -- David Poole 21-Oct-2012
 
+library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
@@ -15,9 +16,9 @@ entity subway_tickets is
              an : out std_logic_vector( 3 downto 0 );
              dp : out std_logic
         ); 
-end entity subway_ticket;
+end entity subway_tickets;
 
-architecture subway_ticket_arch of subway_ticket is 
+architecture subway_tickets_arch of subway_tickets is 
     type state_type is (
         STATE_ENTER_MONEY,
         STATE_CHOOSE_ZONE,
@@ -31,6 +32,16 @@ architecture subway_ticket_arch of subway_ticket is
     signal user_total_money : std_logic_vector(15 downto 0);
     signal user_zone_choice : std_logic_vector(1 downto 0 );
     signal user_ticket_count : std_logic_vector (2 downto 0) := (others=>'0');
+
+    type basys2_io is record
+            mclk : std_logic;
+            btn : std_logic_vector(3 downto 0);
+             sw : std_logic_vector(7 downto 0);
+            led : std_logic_vector( 7 downto 0 );
+            seg : std_logic_vector( 6 downto 0 );
+             an : std_logic_vector( 3 downto 0 );
+             dp : std_logic;
+    end record basys2_io;
 
     component coin_counter is
         port( reset : in std_logic; 
@@ -79,5 +90,5 @@ architecture subway_ticket_arch of subway_ticket is
 
 begin
 
-end architecture subway_ticket_arch;
+end architecture subway_tickets_arch;
 
