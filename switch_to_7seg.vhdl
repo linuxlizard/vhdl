@@ -85,7 +85,7 @@ begin
 	 
     -- the actual divider will be 125e6 or so (25Mhz down to 0.20hz)
     divider : clk_divider
-        generic map(clkmax => 4) -- simulation
+        generic map(clkmax => 8) -- simulation
 --        generic map(clkmax => 125000000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
