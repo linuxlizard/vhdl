@@ -86,8 +86,10 @@ begin
 
     -- the actual divider will be 2.1e6 or so (25Mhz down to 15hz)
     run_divider : clk_divider
+--pragma synthesis off
         generic map(clkmax => 4) -- simulation
---        generic map(clkmax => 50000) -- synthesis
+--pragma synthesis on
+        generic map(clkmax => 50000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
                 clk_out => divider_out_7segmuxor_in );
@@ -130,7 +132,7 @@ begin
                     digit_1 => out7seg1,
                     digit_2 => out7seg2,
                     digit_3 => out7seg3,
-                    decimal_point_mask => "0000", -- no decimal points
+                    decimal_point_mask => "1111", -- no decimal points
                     anode_out => an, -- 7segment display anode
                     digit_out => seg, -- 7segment display segment
                     dp_out => dp -- decimal point
