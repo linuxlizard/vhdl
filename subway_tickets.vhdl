@@ -49,6 +49,8 @@ architecture subway_tickets_arch of subway_tickets is
     signal user_ticket_count : std_logic_vector (2 downto 0) := (others=>'0');
     signal user_change_due : std_logic_vector(15 downto 0) := (others=>'0');
 
+    signal state_debug : std_logic_vector (7 downto 0 );
+
     type basys2_io is record
             reset : std_logic;
             btn : std_logic_vector(3 downto 0);
@@ -118,27 +120,25 @@ architecture subway_tickets_arch of subway_tickets is
             ); 
     end component ticket_dispense;
 
-    component digits_to_7seg is
+    component money_to_7seg is
         port(  rst : in std_logic; 
                 mclk : in std_logic;
-             word_in : in std_logic_vector(15 downto 0 );
+                word_in : in std_logic_vector(15 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
                 dp : out std_logic
             ); 
-    end component digits_to_7seg;
+    end component money_to_7seg;
 
     function integer_to_vector( in_num : in integer ) return std_logic_vector is
         variable i : integer;
         variable num : integer;
-        variable mask : integer;
         variable str : line;
         variable vec : std_logic_vector (15 downto 0 );
         variable tmp : integer;
         variable tmp2 : integer;
     begin
         num := in_num;
-        mask := 1;
         vec := X"0000";
         for i in 0 to 15 loop
             write( str, string'("i="));
@@ -146,7 +146,7 @@ architecture subway_tickets_arch of subway_tickets is
             writeline(output,str);
 
             -- no logical operations on integers so we'll do it the hard way
-            -- need to test if LSb is '1' or '0'
+            -- because we need to test if LSb is '1' or '0'
             tmp := num / 2;
             tmp2 := tmp * 2;
 
@@ -162,7 +162,6 @@ architecture subway_tickets_arch of subway_tickets is
             -- can't figure out how to shift an integer so we'll do it the 
             -- hard way
             num := num / 2;
-            mask := mask * 2;
         end loop;
         return vec;
     end;
@@ -245,7 +244,7 @@ begin
             an => ticket_dispense_io.an,
             dp => ticket_dispense_io.dp);
 
-    run_display_change : digits_to_7seg 
+    run_display_change : money_to_7seg 
         port map ( rst => display_change_io.reset,
                     mclk => mclk,
                     word_in => user_change_due,
@@ -270,12 +269,14 @@ begin
         variable cash_entered : integer := 0;
         variable timer_countdown : integer := 0;
         variable change_due : integer := 0;
+        variable str : line;
     begin
         if reset='1' then
             coin_counter_io.reset <= '1';
             ticket_chooser_io.reset <= '1';
             ticket_counter_io.reset <= '1';
             ticket_dispense_io.reset <= '1';
+            display_change_io.reset <= '1';
             led <= "00000000";
             seg <= "0000000";
             an <= "1111";
@@ -290,14 +291,17 @@ begin
         elsif rising_edge(mclk) then
             case current_state is
                 when STATE_START =>
+                    state_debug <= X"00";
                     coin_counter_io.reset <= '0';
                     ticket_chooser_io.reset <= '0';
                     ticket_counter_io.reset <= '0';
                     ticket_dispense_io.reset <= '0';
+                    display_change_io.reset <= '0';
                     led <= "00000000";
                     next_state <= STATE_ENTER_MONEY;
 
                 when STATE_ENTER_MONEY =>
+                    state_debug <= X"01";
                     -- inputs
                     coin_counter_io.btn <= btn;
                     coin_counter_io.sw <= "00000000";
@@ -312,6 +316,7 @@ begin
                     end if;
 
                 when STATE_CHOOSE_ZONE =>
+                    state_debug <= X"02";
                     -- inputs
                     ticket_chooser_io.btn <= btn;
                     ticket_chooser_io.sw <= "00000000";
@@ -326,6 +331,7 @@ begin
                     end if;
 
                 when STATE_TICKET_COUNTER =>
+                    state_debug <= X"04";
                     -- inputs
                     ticket_counter_io.btn <= btn;
                     ticket_counter_io.sw <= "00000000";
@@ -340,6 +346,7 @@ begin
                     end if;
 
                 when STATE_MONEY_CHECK =>
+                    state_debug <= X"08";
 
                     if user_zone_choice=zone_a then
                         ticket_cost := 100;
@@ -372,9 +379,17 @@ begin
                         change_due := cash_entered - required_cost;
                         user_change_due <= integer_to_vector(change_due);
                         next_state <= STATE_TICKET_DISPENSE;
+                        write( str, string'("required="));
+                        write(str,required_cost);
+                        write(str,string'(" entered="));
+                        write(str,cash_entered);
+                        write(str,string'(" change="));
+                        write(str,change_due);
+                        writeline(output,str);
                     end if;
 
                 when STATE_TICKET_DISPENSE =>
+                    state_debug <= X"10";
                     led <= ticket_dispense_io.led;
                     seg <= ticket_dispense_io.seg;
                     an <= ticket_dispense_io.an;
@@ -386,21 +401,28 @@ begin
                     next_state <= STATE_WAIT_3_SECONDS;
 
                 when STATE_WAIT_3_SECONDS =>
+                    state_debug <= X"20";
                     timer_countdown := timer_countdown - 1;
                     if timer_countdown=0 then
                         next_state <= STATE_RETURN_CHANGE;
                     end if;
 
                 when STATE_RETURN_CHANGE =>
+                    state_debug <= X"40";
+                    seg <= display_change_io.seg;
+                    an <= display_change_io.an;
+                    dp <= display_change_io.dp;
                     if btn_3_pushed='1' then
                         next_state <= STATE_RESET_0;
                     end if;
                     
                 when STATE_RESET_0 =>
+                    state_debug <= X"80";
                     coin_counter_io.reset <= '1';
                     ticket_chooser_io.reset <= '1';
                     ticket_counter_io.reset <= '1';
                     ticket_dispense_io.reset <= '1';
+                    display_change_io.reset <= '1';
                     next_state <= STATE_RESET_1;
 
                 when STATE_RESET_1 =>
