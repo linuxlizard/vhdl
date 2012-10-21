@@ -8,6 +8,9 @@ use ieee.numeric_std.all;
 use std.textio.all;
 use ieee.std_logic_textio.all;
 
+library work;
+use work.debug_utils.all;
+
 entity basys2 is 
 end entity basys2;
 
