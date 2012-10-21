@@ -16,7 +16,9 @@ test_vec : test_vec.o
 test_vec.o : test_vec.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
-basys2 : subway_tickets.o digits_to_7seg.o  basys2.o
+basys2 : subway_tickets.o digits_to_7seg.o basys2.o ticket_counter.o\
+        ticket_dispense.o edge_to_pulse.o coin_counter.o ticket_display.o\
+        money_to_7seg.o hex_to_7seg.o digits_to_7seg.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 basys2.o : basys2.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
