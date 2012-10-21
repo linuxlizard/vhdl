@@ -47,11 +47,16 @@ architecture run_hex_to_7seg of hex_to_7seg is
     signal out7seg2 : std_logic_vector (6 downto 0 );
     signal out7seg3 : std_logic_vector (6 downto 0 );
 
+    signal in7seg0 : std_logic_vector (6 downto 0 );
+    signal in7seg1 : std_logic_vector (6 downto 0 );
+    signal in7seg2 : std_logic_vector (6 downto 0 );
+    signal in7seg3 : std_logic_vector (6 downto 0 );
+
     -- clock divider out to 7segmuxor in 
     signal divider_out_7segmuxor_in : std_logic;
 
     component clk_divider is
-        generic (clkmax : integer);
+        generic (clkmax : integer := 50000 );
         port ( reset : in std_logic;
                clk_in : in std_logic;
                clk_out : out std_logic );
@@ -90,7 +95,7 @@ begin
 --pragma synthesis off
         generic map(clkmax => 4) -- simulation
 --pragma synthesis on
-        generic map(clkmax => 50000) -- synthesis
+--        generic map(clkmax => 50000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
                 clk_out => divider_out_7segmuxor_in );
@@ -129,15 +134,32 @@ begin
         port map (  reset => rst,
                     clk => divider_out_7segmuxor_in,
                     display_mask => display_mask_in, -- want left-most digit only
-                    digit_0 => out7seg0,
-                    digit_1 => out7seg1,
-                    digit_2 => out7seg2,
-                    digit_3 => out7seg3,
-                    decimal_point_mask => "1111", -- no decimal points
+                    digit_0 => in7seg0,
+                    digit_1 => in7seg1,
+                    digit_2 => in7seg2,
+                    digit_3 => in7seg3,
+                    decimal_point_mask => "0000", -- no decimal points
                     anode_out => an, -- 7segment display anode
                     digit_out => seg, -- 7segment display segment
                     dp_out => dp -- decimal point
                 );
+
+    -- running out of time so hack in a way to display the blinking "--" for
+    -- cancel by passing in 0xffff and make that blink "--"
+    run_cheap_hack : process(mclk)
+    begin
+        if word_in=X"ffff" then
+            in7seg0 <= "0111111";
+            in7seg1 <= "0111111";
+            in7seg2 <= "0111111";
+            in7seg3 <= "0111111";
+        else
+            in7seg0 <= out7seg0;
+            in7seg1 <= out7seg1;
+            in7seg2 <= out7seg2;
+            in7seg3 <= out7seg3;
+        end if;
+    end process run_cheap_hack;
 
 end architecture run_hex_to_7seg;
 
