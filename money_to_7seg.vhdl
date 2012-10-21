@@ -9,7 +9,7 @@
 --                     to make money display
 
 library ieee;
-use ieee.std_logic_1164.ALL;
+use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 use ieee.std_logic_textio.all;
@@ -64,7 +64,7 @@ architecture run_money_to_7seg of money_to_7seg is
 
 
     component clk_divider is
-        generic (clkmax : integer);
+        generic (clkmax : integer := 50000 );
         port ( reset : in std_logic;
                clk_in : in std_logic;
                clk_out : out std_logic );
@@ -108,7 +108,7 @@ begin
 --pragma synthesis off
         generic map(clkmax => 4) -- simulation
 --pragma synthesis on
-        generic map(clkmax => 50000) -- synthesis
+--        generic map(clkmax => 50000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
                 clk_out => divider_out_7segmuxor_in );
