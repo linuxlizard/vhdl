@@ -59,6 +59,150 @@ architecture basys2_arch of basys2 is
         end if;
     end;
 
+    procedure run_test1 ( signal btn: out std_logic_vector(3 downto 0) )
+    is
+    begin
+        -- Insert $1 x 3
+        -- Select Zone 1 (100 ticket)
+        -- Chose 1 ticket.
+        -- should get 200 change 
+
+        -- insert $3
+        btn <= add_coin( 100 );
+        wait for 20 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        btn <= add_coin( 100 );
+        wait for 20 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        btn <= add_coin( 100 );
+        wait for 20 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        btn <= add_coin( 100 );
+        wait for 20 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        -- done entering money; push & release btn3 to go to zone chooser
+        btn <= "1000";
+        wait for 80 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        -- push & release btn 3 to go to next state (we'll go to zone A)
+        btn <= "1000";
+        wait for 80 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        --push & release btn 3 to indicate we want one ticket (the default)
+        btn <= "1000";
+        wait for 80 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        -- should be dispensing tickets now
+
+        -- so what do we have?
+        for i in 0 to 20000 loop 
+            dbgdump( led, seg, an, dp );
+            
+            -- sample 2x the 7seg display rate; in simulation
+            -- clock period is 20ns. 7seg divider is 4 so 7seg period is 80ns ;
+            -- sample @ Nyquist just so I can show off I know what Nyquist
+            -- means
+--            wait for 40 ns;
+            wait for 1 us;
+        end loop;
+    end;
+
+    procedure run_next( signal btn: out std_logic_vector(3 downto 0) ) is
+    begin
+        btn <= "1000";
+        wait for 80 ns;
+        btn <= "0000";
+        wait for 80 ns;
+    end;
+
+    procedure run_test2( signal btn: out std_logic_vector(3 downto 0) )
+    is
+    begin
+        -- Insert $1
+        -- Select Zone 2 (135 ticket)
+        -- Chose 1 ticket.
+        -- LED 2 should go back on. We should go back to asking for more money.
+
+        -- insert $1
+        btn <= add_coin( 100 );
+        wait for 20 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        -- done entering money; push & release btn3 to go to zone chooser
+        run_next(btn);
+
+        --push & release btn 1 to go to next entry 
+        btn <= "0010";
+        wait for 80 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        -- select Zone B
+        run_next(btn);
+
+        -- want one ticket so just take the default 
+        run_next(btn);
+
+        -- not enough $ so we should go back to asking for more money & led
+        -- comes on
+    end;
+
+    procedure run_test3( signal btn: out std_logic_vector(3 downto 0) ) is
+        variable str : line;
+    begin
+        -- Insert $1
+        -- Select Zone 1 (100 ticket)
+        -- Attempt to chose many, many tickets.
+        -- LED 0 should go on. We should go back to asking for more money.
+
+        -- insert $1
+        btn <= add_coin( 100 );
+        wait for 20 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        -- go to zone chooser
+        run_next(btn);
+
+        -- take default zone go to num tickets chooser
+        run_next(btn);
+
+        -- now we want to decrease our number of tickets from 1 which is an
+        -- error
+        btn <= "0010";
+        wait for 80 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        write( str, string'("led=") );
+        write( str, led );
+        writeline( output, str );
+
+        -- so what do we have?
+        for i in 0 to 20000 loop 
+            dbgdump( led, seg, an, dp );
+            write( str, string'("led=") );
+            write( str, led );
+            writeline( output, str );
+            wait for 1 us;
+        end loop;
+    end;
+
 begin
 
     run_subway_tickets : subway_tickets
@@ -92,64 +236,9 @@ begin
         sw <= "00000000";
         wait for 80 ns;
 
-        -- insert $3
-        btn <= add_coin( 100 );
-        wait for 20 ns;
-        btn <= "0000";
-        wait for 80 ns;
-
-        btn <= add_coin( 100 );
-        wait for 20 ns;
-        btn <= "0000";
-        wait for 80 ns;
-
-        btn <= add_coin( 100 );
-        wait for 20 ns;
-        btn <= "0000";
-        wait for 80 ns;
-
-        btn <= add_coin( 100 );
-        wait for 20 ns;
-        btn <= "0000";
-        wait for 80 ns;
-
-        -- done entering money; push & release btn3 to go to zone chooser
-        btn <= "1000";
-        wait for 80 ns;
-        btn <= "0000";
-        wait for 80 ns;
-
-
-        -- push & release btn 3 to go to next state (we'll go to zone A)
-        btn <= "1000";
-        wait for 80 ns;
-        btn <= "0000";
-        wait for 80 ns;
-
-        --push & release btn 3 to indicate we want one ticket (the default)
-        btn <= "1000";
-        wait for 80 ns;
-        btn <= "0000";
-        wait for 80 ns;
-
-        -- should be dispensing tickets now
-
-        -- so what do we have?
-        for i in 0 to 20000 loop 
-            dbgdump( led, seg, an, dp );
---            write( str, string'("led=") );
---            write( str, led );
---            writeline( output, str );
-            
-            -- sample 2x the 7seg display rate; in simulation
-            -- clock period is 20ns. 7seg divider is 4 so 7seg period is 80ns ;
-            -- sample @ Nyquist just so I can show off I know what Nyquist
-            -- means
---            wait for 40 ns;
-            wait for 1 us;
-        end loop;
-
-        wait for 10 ns;
+--        run_test1( btn );
+--        run_test2( btn );
+        run_test3( btn );
 
        wait;
     end process stimulus;
