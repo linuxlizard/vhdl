@@ -81,23 +81,19 @@ begin
         elsif rising_edge(mclk) then
             -- do stuff
             if btn_up_in = '1' then
-                    write( str, string'("error led=") );
-                    writeline( output, str );
                 if value < 4 then
                     value := value + 1;
---                    led <= X"00";
+                    led <= X"00";
                 else 
                     -- light up an error led
---                    led <= X"01";
+                    led <= X"01";
                 end if;
             elsif btn_down_in = '1' then
                 if value > 1 then
                     value := value - 1;
---                    led <= X"00";
+                    led <= X"00";
                 else
                     led <= X"01";
-                    write( str, string'("error led=") );
-                    writeline( output, str );
                 end if;
             end if;
 
