@@ -159,7 +159,6 @@ begin
                     seg => out7seg0
                 );
 
-
     sevenseg_muxor : ssegmuxor
         port map ( reset => rst,
                     clk => divider_out_7segmuxor_in,
@@ -168,18 +167,7 @@ begin
                     digit_1 => sseg_digit1_in,
                     digit_2 => sseg_digit2_in,
                     digit_3 => sseg_digit3_in,
---                    digit_0 => out7seg0,
---                    digit_1 => out7seg1,
---                    digit_2 => out7seg2,
---                    digit_3 => out7seg3,
-         decimal_point_mask => dp_mask_in,
-
---                    is_negative => '1',
---                   digit_0 => "1111001",
---                   digit_1 => "0100100",
---                    digit_2 => "0110000",
---                    digit_3 => "0011001",
-
+                    decimal_point_mask => dp_mask_in,
                     anode_out => an, -- 7segment display anode
                     digit_out => seg, -- 7segment display segment
                     dp_out => dp -- decimal point
@@ -189,7 +177,7 @@ begin
     begin
         if rst='1' then
             display_mask <= "0011";
-            dp_mask_in <= "1101";
+            dp_mask_in <= "0010";
             sseg_digit0_in <= "1000000";  -- "0" (shouldn't be seen) 
             sseg_digit1_in <= "1000000";
             sseg_digit2_in <= "1000000";
@@ -203,7 +191,7 @@ begin
                 -- fmt "__0.0"
                 -- output hardwired to "  0.0"
                 display_mask <= "0011";
-                dp_mask_in <= "1101";
+                dp_mask_in <= "0010";
                 sseg_digit0_in <= "1000000";  -- "0" (shouldn't be seen) 
                 sseg_digit1_in <= "1000000";
                 sseg_digit2_in <= "1000000";
@@ -212,7 +200,7 @@ begin
             elsif word_in < X"03e8" then  -- < d'1000
                 -- fmt "_n.nn"
                 display_mask <= "0111";
-                dp_mask_in <= "1011";
+                dp_mask_in <= "0100";
                 sseg_digit0_in <= "1000000"; -- "0" (shouldn't be seen) 
                 sseg_digit1_in <= out7seg1;
                 sseg_digit2_in <= out7seg2;
@@ -221,7 +209,7 @@ begin
                 -- fmt "nn.nn"
                 -- use all four digits and the decimal is at position 2
                 display_mask <= "1111";
-                dp_mask_in <= "1011";
+                dp_mask_in <= "0100";
                 sseg_digit0_in <= out7seg0;
                 sseg_digit1_in <= out7seg1;
                 sseg_digit2_in <= out7seg2;
