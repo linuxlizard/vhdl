@@ -45,7 +45,7 @@ architecture basys2_arch of basys2 is
 
 begin
 
-    run_puter : puter 
+    run_subway_tickets : subway_tickets
         port map( 
             mclk => mclk,
             btn => btn,
@@ -75,7 +75,6 @@ begin
 
         rst <= '0';
         wait for 10 ns;
-
 
         -- so what do we have?
         for i in 0 to 20000 loop 
