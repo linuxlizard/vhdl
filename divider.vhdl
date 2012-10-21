@@ -7,7 +7,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity clk_divider is
-    generic (clkmax : integer);
+    generic (clkmax : integer := 50000 );
     port ( reset : in std_logic;
            clk_in : in std_logic;
            clk_out : out std_logic );
