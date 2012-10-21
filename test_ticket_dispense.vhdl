@@ -34,6 +34,8 @@ architecture test_ticket_dispense_arch of test_ticket_dispense is
     component ticket_dispense is
         port( reset : in std_logic; 
                 mclk : in std_logic;
+
+                cancel : in std_logic;
                 zone_choice : in std_logic_vector (1 downto 0 );
                 ticket_count : in std_logic_vector (2 downto 0);
 
@@ -49,6 +51,7 @@ begin
         port map (
             reset => sw(0),
             mclk => mclk,
+            cancel => '0',
             zone_choice => user_zone_choice,
             ticket_count => user_ticket_count,
             seg => seg,

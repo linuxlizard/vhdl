@@ -29,8 +29,10 @@ architecture subway_tickets_arch of subway_tickets is
         STATE_TICKET_COUNTER,
         STATE_MONEY_CHECK,
         STATE_TICKET_DISPENSE,
-        STATE_WAIT_3_SECONDS,
+        STATE_WAIT_SECONDS,
         STATE_RETURN_CHANGE,
+
+        STATE_CANCEL,
 
         STATE_RESET_0,
         STATE_RESET_1,
@@ -41,6 +43,7 @@ architecture subway_tickets_arch of subway_tickets is
     signal current_state, next_state : state_type := STATE_START;
     
     signal reset : std_logic := '1';
+    signal cancel : std_logic := '0';
 
     signal btn_3_pushed : std_logic := '0';
 
@@ -48,6 +51,7 @@ architecture subway_tickets_arch of subway_tickets is
     signal user_zone_choice : std_logic_vector(1 downto 0 ) := (others=>'0');
     signal user_ticket_count : std_logic_vector (2 downto 0) := (others=>'0');
     signal user_change_due : std_logic_vector(15 downto 0) := (others=>'0');
+    signal user_cancel : std_logic;
 
     signal state_debug : std_logic_vector (7 downto 0 );
 
@@ -113,6 +117,7 @@ architecture subway_tickets_arch of subway_tickets is
     component ticket_dispense is
         port( reset : in std_logic; 
                 mclk : in std_logic;
+                cancel : in std_logic;
                 zone_choice : in std_logic_vector (1 downto 0 );
                 ticket_count : in std_logic_vector (2 downto 0);
 
@@ -177,6 +182,7 @@ begin
         port map (
             reset => ticket_dispense_io.reset,
             mclk => mclk,
+            cancel => user_cancel,
             zone_choice => user_zone_choice,
             ticket_count => user_ticket_count,
             seg => ticket_dispense_io.seg,
@@ -192,6 +198,8 @@ begin
                     dp => display_change_io.dp );
 
     reset <= sw(0);
+
+    cancel <= sw(1);
 
     state_proc : process( mclk, reset )
     begin
@@ -220,6 +228,7 @@ begin
             seg <= "0000000";
             an <= "1111";
             dp <= '1';
+            user_cancel <= '0';
 
             ticket_cost := (others=>'0');
             required_cost := (others=>'0');
@@ -231,6 +240,7 @@ begin
             case current_state is
                 when STATE_START =>
                     state_debug <= X"00";
+                    user_cancel <= '0';
                     coin_counter_io.reset <= '0';
                     ticket_chooser_io.reset <= '0';
                     ticket_counter_io.reset <= '0';
@@ -259,6 +269,9 @@ begin
                     if btn_3_pushed='1' then
                         next_state <= STATE_CHOOSE_ZONE;
                     end if;
+                    if cancel='1' then
+                        next_state <= STATE_CANCEL;
+                    end if;
 
                 when STATE_CHOOSE_ZONE =>
                     state_debug <= X"02";
@@ -274,6 +287,9 @@ begin
                     if btn_3_pushed='1' then
                         next_state <= STATE_TICKET_COUNTER;
                     end if;
+                    if cancel='1' then
+                        next_state <= STATE_CANCEL;
+                    end if;
 
                 when STATE_TICKET_COUNTER =>
                     state_debug <= X"04";
@@ -288,6 +304,9 @@ begin
 
                     if btn_3_pushed='1' then
                         next_state <= STATE_MONEY_CHECK;
+                    end if;
+                    if cancel='1' then
+                        next_state <= STATE_CANCEL;
                     end if;
 
                 when STATE_MONEY_CHECK =>
@@ -346,9 +365,27 @@ begin
                     --pragma synthesis off
                     timer_countdown := 64;
                     --pragma synthesis on
-                    next_state <= STATE_WAIT_3_SECONDS;
+                    next_state <= STATE_WAIT_SECONDS;
 
-                when STATE_WAIT_3_SECONDS =>
+                when STATE_CANCEL =>
+                    state_debug <= X"11";
+
+                    -- setting to 1 makes the ticket_dispense display "--"
+                    -- (ugly hack)
+                    user_cancel <= '1';
+
+                    -- led03 turned on 
+                    ticket_dispense_io.led <= "00001000";
+                    seg <= ticket_dispense_io.seg;
+                    an <= ticket_dispense_io.an;
+                    dp <= ticket_dispense_io.dp;
+                    timer_countdown := 125000000;
+                    --pragma synthesis off
+                    timer_countdown := 128;
+                    --pragma synthesis on
+                    next_state <= STATE_WAIT_SECONDS;
+
+                when STATE_WAIT_SECONDS =>
                     state_debug <= X"20";
                     led <= ticket_dispense_io.led;
                     seg <= ticket_dispense_io.seg;

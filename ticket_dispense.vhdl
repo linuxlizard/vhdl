@@ -15,6 +15,11 @@ use work.ticketzones.all;
 entity ticket_dispense is
     port( reset : in std_logic; 
             mclk : in std_logic;
+
+            -- on cancel, display "--" blinking instead of the code+number
+            -- (ugly hack)
+            cancel : in std_logic;
+            
             zone_choice : in std_logic_vector (1 downto 0 );
             ticket_count : in std_logic_vector (2 downto 0);
 
@@ -91,18 +96,21 @@ begin
             --  four bits "A" 
             -- two bits zero & ticket count
             -- pad four more bits;
-            if zone_choice=zone_a then
-                display_out <= ((X"a" & "0") &
-                                std_logic_vector(ticket_count) ) & X"00";
-            elsif zone_choice=zone_b then
-                display_out <= ((X"b" & "0") &
-                                std_logic_vector(ticket_count) ) & X"00";
-
-            elsif zone_choice=zone_c then
-                display_out <= ((X"c" & "0") &
-                                std_logic_vector(ticket_count) ) & X"00";
-            else
+            if cancel='1' then
+                display_mask <= "0110";
                 display_out <= X"ffff";
+            else 
+                display_mask <= "1100";
+                if zone_choice=zone_a then
+                    display_out <= ((X"a" & "0") & ticket_count ) & X"00";
+                elsif zone_choice=zone_b then
+                    display_out <= ((X"b" & "0") & ticket_count ) & X"00";
+
+                elsif zone_choice=zone_c then
+                    display_out <= ((X"c" & "0") & ticket_count ) & X"00";
+                else
+                    display_out <= X"ffff";
+                end if;
             end if;
 
             -- blink by turning entire segment on/off
