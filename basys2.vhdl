@@ -203,6 +203,46 @@ architecture basys2_arch of basys2 is
         end loop;
     end;
 
+    procedure run_cancel_test( signal sw : out std_logic_vector(7 downto 0 );
+                                signal btn: out std_logic_vector(3 downto 0) ) is
+        variable str : line;
+    begin
+        -- Insert $1. Go next.
+        -- Select Zone 1 (100 ticket). Go next.
+        -- Select cancel.
+        -- 
+
+        -- insert $1
+        btn <= add_coin( 100 );
+        wait for 20 ns;
+        btn <= "0000";
+        wait for 80 ns;
+
+        -- go to zone chooser
+        run_next(btn);
+
+        -- take default zone go to num tickets chooser
+        run_next(btn);
+
+        -- cancel switch
+        sw(1) <= '1';
+        wait for 80 ns;
+        sw(1) <= '0';
+        wait for 80 ns;
+
+        write( str, string'("led=") );
+        write( str, led );
+        writeline( output, str );
+
+        -- so what do we have?
+        for i in 0 to 2000 loop 
+            dbgdump( led, seg, an, dp );
+            write( str, string'("led=") );
+            write( str, led );
+            writeline( output, str );
+            wait for 1 us;
+        end loop;
+    end;
 begin
 
     run_subway_tickets : subway_tickets
@@ -238,7 +278,8 @@ begin
 
 --        run_test1( btn );
 --        run_test2( btn );
-        run_test3( btn );
+--        run_test3( btn );
+        run_cancel_test( sw, btn );
 
        wait;
     end process stimulus;
