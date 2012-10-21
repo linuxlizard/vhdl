@@ -22,6 +22,9 @@ architecture test_ticket_counter_arch of test_ticket_counter is
     signal an : std_logic_vector( 3 downto 0 );
     signal dp : std_logic;
 
+    -- current value
+    signal user_ticket_count : std_logic_vector(2 downto 0 );
+
     component ticket_counter is
         port( reset : in std_logic; 
                 mclk : in std_logic;
@@ -45,9 +48,12 @@ begin
             reset => sw(0),
             mclk => mclk,
             btn => btn,
+            led => led,
             seg => seg,
             an => an,
-            dp => dp );
+            dp => dp,
+            
+            ticket_count => user_ticket_count );
 
     clock : process is
     begin
@@ -68,21 +74,36 @@ begin
 
         sw <= "00000000"; -- release reset
         wait for 10 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
 
         btn <= btn_up;
         -- leave it pressed for a looong time
         wait for 100 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
 
         btn <= btn_down;
         -- leave it pressed for a looong time
         wait for 100 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
 
         btn <= btn_up;
         -- leave it pressed for a looong time
         wait for 100 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
 
         for i in 0 to 255 loop
             work.debug_utils.dbg_7seg( seg, an, dp ); 
+            write( str, string'("ticket_count=") );
+            write( str, user_ticket_count );
+            writeline(output,str );
             wait for 50 ns;
         end loop;
 
