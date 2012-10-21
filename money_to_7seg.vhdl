@@ -105,7 +105,9 @@ architecture run_money_to_7seg of money_to_7seg is
 begin
     -- the actual divider will be 2.1e6 or so (25Mhz down to 15hz)
     run_divider : clk_divider
---        generic map(clkmax => 4) -- simulation
+--pragma synthesis off
+        generic map(clkmax => 4) -- simulation
+--pragma synthesis on
         generic map(clkmax => 50000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
