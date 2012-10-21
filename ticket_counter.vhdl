@@ -69,7 +69,8 @@ begin
                    Pulse_out => btn_down_in );
 
     run_ticket_counter : process(mclk,reset) is
-        variable value : unsigned(2 downto 0);
+        variable value : unsigned(2 downto 0) := "001";
+        variable str : line;
     begin
         if reset='1' then
             -- default to one
@@ -79,12 +80,25 @@ begin
             led <= (others=>'0');
         elsif rising_edge(mclk) then
             -- do stuff
-            if btn_up_in = '1' and value < 4 then
-                value := value + 1;
-            elsif btn_down_in = '1' and value > 1 then
-                value := value - 1;
-            else 
-                -- anything?
+            if btn_up_in = '1' then
+                    write( str, string'("error led=") );
+                    writeline( output, str );
+                if value < 4 then
+                    value := value + 1;
+--                    led <= X"00";
+                else 
+                    -- light up an error led
+--                    led <= X"01";
+                end if;
+            elsif btn_down_in = '1' then
+                if value > 1 then
+                    value := value - 1;
+--                    led <= X"00";
+                else
+                    led <= X"01";
+                    write( str, string'("error led=") );
+                    writeline( output, str );
+                end if;
             end if;
 
             -- only need 3 bits
