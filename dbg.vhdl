@@ -40,7 +40,7 @@ package body debug_utils is
          when "1000110" => return 16#C#; -- 0x46
          when "0100001" => return 16#d#; -- 0x21
          when "0000110" => return 16#E#; -- 0x06
-         when "0001110" => return 16#F#; -- 0x07
+         when "0001110" => return 16#F#; -- 0x0e
          when "1000000" => return 0; -- 0x40
          when others => return -1;            
         end case;
