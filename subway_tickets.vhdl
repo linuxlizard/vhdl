@@ -51,6 +51,8 @@ architecture subway_tickets_arch of subway_tickets is
 
     signal state_debug : std_logic_vector (7 downto 0 );
 
+    signal led_debug : std_logic_vector ( 7 downto 0 );
+
     type basys2_io is record
             reset : std_logic;
             btn : std_logic_vector(3 downto 0);
@@ -130,69 +132,6 @@ architecture subway_tickets_arch of subway_tickets is
             ); 
     end component money_to_7seg;
 
-    function integer_to_vector( in_num : in integer ) return std_logic_vector is
-        variable i : integer;
-        variable num : integer;
-        variable str : line;
-        variable vec : std_logic_vector (15 downto 0 );
-        variable tmp : integer;
-        variable tmp2 : integer;
-    begin
-        num := in_num;
-        vec := X"0000";
-        for i in 0 to 15 loop
-            write( str, string'("i="));
-            write( str, i );
-            writeline(output,str);
-
-            -- no logical operations on integers so we'll do it the hard way
-            -- because we need to test if LSb is '1' or '0'
-            tmp := num / 2;
-            tmp2 := tmp * 2;
-
-            write( str, tmp );
-            write( str, string'(" ") );
-            write( str, tmp2 );
-            writeline(output,str);
-
-            if num /= tmp2 then
-                vec(i) := '1';
-            end if;
-
-            -- can't figure out how to shift an integer so we'll do it the 
-            -- hard way
-            num := num / 2;
-        end loop;
-        return vec;
-    end;
-
-    function vector_to_integer( vec : in std_logic_vector ) return integer is
-        variable i : integer;
-        variable sum : integer;
-        variable adder : integer;
-        variable str : line;
-    begin
---        write( str, string'("len="));
---        write( str, vec'length );
---        writeline( output, str );
-
-        sum := 0;
-        adder := 1;
-        for i in 1 to (vec'length) loop
---            write( str, string'("i="));
---            write( str, i );
---            writeline(output,str);
-
-            if vec(i-1)='1' then
-                sum := sum + adder;
-            end if;
-            -- can't figure out how to shift an integer so we'll do it the 
-            -- hard way
-            adder := adder * 2;
-        end loop;
-        return sum;
-    end;
-
 begin
     btn_3_edge_to_pulse : edge_to_pulse
         port map ( CLK => mclk,
@@ -264,11 +203,11 @@ begin
     end process;
 
     run_subway_tickets : process(mclk,reset) 
-        variable ticket_cost : integer := 0;
-        variable required_cost : integer := 0;
-        variable cash_entered : integer := 0;
-        variable timer_countdown : integer := 0;
-        variable change_due : integer := 0;
+        variable ticket_cost : unsigned(15 downto 0) := (others=>'0');
+        variable required_cost : unsigned (15 downto 0) := (others=>'0');
+        variable cash_entered : unsigned (15 downto 0 ) := (others=>'0');
+        variable change_due : unsigned  (15 downto 0 ):= (others=>'0');
+        variable timer_countdown : integer;
         variable str : line;
     begin
         if reset='1' then
@@ -282,11 +221,11 @@ begin
             an <= "1111";
             dp <= '1';
 
-            ticket_cost := 0;
-            required_cost := 0;
-            cash_entered := 0;
+            ticket_cost := (others=>'0');
+            required_cost := (others=>'0');
+            cash_entered := (others=>'0');
             timer_countdown := 0;
-            change_due := 0;
+            change_due := (others=>'0');
 
         elsif rising_edge(mclk) then
             case current_state is
@@ -297,7 +236,13 @@ begin
                     ticket_counter_io.reset <= '0';
                     ticket_dispense_io.reset <= '0';
                     display_change_io.reset <= '0';
-                    led <= "00000000";
+
+                    --- these modules don't drive the LEDs so add a load here
+                    coin_counter_io.led <= X"00";
+                    ticket_chooser_io.led <= X"00";
+                    ticket_dispense_io.led <= X"00";
+                    display_change_io.led <= X"00";
+                    
                     next_state <= STATE_ENTER_MONEY;
 
                 when STATE_ENTER_MONEY =>
@@ -306,7 +251,7 @@ begin
                     coin_counter_io.btn <= btn;
                     coin_counter_io.sw <= "00000000";
                     --outputs
-                    led <= "00000000";
+                    led <= coin_counter_io.led;
                     seg <= coin_counter_io.seg;
                     an <= coin_counter_io.an;
                     dp <= coin_counter_io.dp;
@@ -321,7 +266,7 @@ begin
                     ticket_chooser_io.btn <= btn;
                     ticket_chooser_io.sw <= "00000000";
                     -- outputs
-                    led <= "00000000";
+                    led <= ticket_chooser_io.led;
                     seg <= ticket_chooser_io.seg;
                     an <= ticket_chooser_io.an;
                     dp <= ticket_chooser_io.dp;
@@ -349,15 +294,15 @@ begin
                     state_debug <= X"08";
 
                     if user_zone_choice=zone_a then
-                        ticket_cost := 100;
+                        ticket_cost := X"0064"; -- 100
                     elsif user_zone_choice=zone_b then
-                        ticket_cost := 135;
+                        ticket_cost := X"0087"; -- 135
                     elsif user_zone_choice=zone_c then
-                        ticket_cost := 245;
+                        ticket_cost := X"00f5"; -- 245;
                     else 
-                        ticket_cost := 999;
+                        ticket_cost := X"ffff";
                     end if;
-                    required_cost := 0;
+                    required_cost := (others=>'0');
 
                     -- I'm caught in typecast hell so let's brute force it
                     if user_ticket_count="001" then
@@ -370,22 +315,25 @@ begin
                         required_cost := ticket_cost+ticket_cost+ticket_cost+ticket_cost;
                     end if;
 
-                    cash_entered := vector_to_integer( user_total_money );
+                    cash_entered := unsigned(user_total_money);
 
                     if cash_entered < required_cost then
+                        -- jump back to coin counter state and light up LED2
                         next_state <= STATE_ENTER_MONEY;
-                        led <= "00000010";
+                        coin_counter_io.led <= "00000100";
                     else 
                         change_due := cash_entered - required_cost;
-                        user_change_due <= integer_to_vector(change_due);
+                        user_change_due <= std_logic_vector(change_due);
                         next_state <= STATE_TICKET_DISPENSE;
+                        -- pragma synthesis off
                         write( str, string'("required="));
-                        write(str,required_cost);
+                        hwrite(str,std_logic_vector(required_cost));
                         write(str,string'(" entered="));
-                        write(str,cash_entered);
+                        hwrite(str,std_logic_vector(cash_entered));
                         write(str,string'(" change="));
-                        write(str,change_due);
+                        hwrite(str,std_logic_vector(change_due));
                         writeline(output,str);
+                        -- pragma synthesis on
                     end if;
 
                 when STATE_TICKET_DISPENSE =>
@@ -402,6 +350,10 @@ begin
 
                 when STATE_WAIT_3_SECONDS =>
                     state_debug <= X"20";
+                    led <= ticket_dispense_io.led;
+                    seg <= ticket_dispense_io.seg;
+                    an <= ticket_dispense_io.an;
+                    dp <= ticket_dispense_io.dp;
                     timer_countdown := timer_countdown - 1;
                     if timer_countdown=0 then
                         next_state <= STATE_RETURN_CHANGE;
@@ -409,6 +361,7 @@ begin
 
                 when STATE_RETURN_CHANGE =>
                     state_debug <= X"40";
+                    led <= display_change_io.led;
                     seg <= display_change_io.seg;
                     an <= display_change_io.an;
                     dp <= display_change_io.dp;
