@@ -43,13 +43,16 @@ begin
             digit_out <= (others=>'1');
             dp_out <= '1';
         elsif rising_edge(clk) then
+
+            -- dp_out : '0' turns on the decimal point
+            --          '1' turns it off
             case counter is
                 when 0 => 
                     anode_out <= "0111" or (not display_mask);
 --                    internal_anode_out <= "0111" or (not display_mask);
                     digit_out <= digit_0;
 --                    internal_digit_out <= digit_0;
-                    dp_out <= decimal_point_mask(3);
+                    dp_out <= '0' or (not decimal_point_mask(3));
 --                    internal_dp_out <= decimal_point_mask(3);
 --                    internal_digit_out <= "1111001";  -- 1
                     counter <= 1;
@@ -59,7 +62,7 @@ begin
                     digit_out <= digit_1;
 --                    internal_digit_out <= digit_1;
 --                    digit_out <= "0100100";  -- 2
-                    dp_out <= decimal_point_mask(2);
+                    dp_out <= '0' or (not decimal_point_mask(2));
 --                    internal_dp_out <= decimal_point_mask(2);
                     counter <= 2;
                 when 2 =>
@@ -67,7 +70,7 @@ begin
 --                    internal_anode_out <= "1101" or (not display_mask);
                     digit_out <= digit_2;
 --                    internal_digit_out <= digit_2;
-                    dp_out <= decimal_point_mask(1);
+                    dp_out <= '0' or (not decimal_point_mask(1));
 --                    internal_dp_out <= decimal_point_mask(1);
 --                    digit_out <= "0110000";  -- 3
                     counter <= 3;
@@ -76,7 +79,7 @@ begin
 --                    internal_anode_out <= "1110" or (not display_mask);
                     digit_out <= digit_3;
 --                    internal_digit_out <= digit_3;
-                    dp_out <= decimal_point_mask(0);
+                    dp_out <= '0' or (not decimal_point_mask(0));
 --                    internal_dp_out <= decimal_point_mask(0);
 --                    digit_out <= "0011001";  -- 4
                     counter <= 0;
