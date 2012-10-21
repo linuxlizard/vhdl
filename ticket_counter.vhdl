@@ -78,9 +78,9 @@ begin
             total_tickets_to_display <= X"0001";
         elsif rising_edge(mclk) then
             -- do stuff
-            if btn_up_in = '1' and value < 5 then
+            if btn_up_in = '1' and value < 4 then
                 value := value + 1;
-            elsif btn_down_in = '1' and value > 0 then
+            elsif btn_down_in = '1' and value > 1 then
                 value := value - 1;
             else 
                 -- anything?
