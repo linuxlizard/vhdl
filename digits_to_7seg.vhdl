@@ -32,8 +32,6 @@ end entity digits_to_7seg;
 
 architecture run_digits_to_7seg of digits_to_7seg is
 
---    signal byte_in : std_logic_vector(7 downto 0 );
-
     -- bcd out to 7seg encoder in
     signal bcd_outnibble0 : std_logic_vector (3 downto 0);
     signal bcd_outnibble1 : std_logic_vector (3 downto 0);
@@ -77,7 +75,7 @@ architecture run_digits_to_7seg of digits_to_7seg is
 
                 anode_out : out std_logic_vector (3 downto 0 );
                 digit_out : out std_logic_vector (6 downto 0 ) ;
-            dp_out : out std_logic
+                dp_out : out std_logic
             );
     end component ssegmuxor;
 
@@ -92,16 +90,12 @@ architecture run_digits_to_7seg of digits_to_7seg is
     signal bcd_is_negative : std_logic:='0';
 
 begin
-    -- hardwire decimal point for now
---    dp <= '0';
-
---    byte_in <= "11111111";
---    byte_in <= "00101010"; -- d'42
-
     -- the actual divider will be 2.1e6 or so (25Mhz down to 15hz)
     run_divider : clk_divider
+--pragma synthesis off
         generic map(clkmax => 4) -- simulation
---        generic map(clkmax => 50000) -- synthesis
+--pragma synthesis on
+        generic map(clkmax => 50000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
                 clk_out => divider_out_7segmuxor_in );
