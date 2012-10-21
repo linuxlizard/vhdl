@@ -157,7 +157,6 @@ begin
     begin
         if reset='1' then
             current_state <= STATE_START;
-            next_state <= STATE_START;
         elsif rising_edge(mclk) then
             current_state <= next_state;
         end if;
