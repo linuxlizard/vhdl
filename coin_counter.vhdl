@@ -13,13 +13,12 @@ entity coin_counter is
             btn : in std_logic_vector(3 downto 0);
             seg : out std_logic_vector( 6 downto 0 );
             an : out std_logic_vector( 3 downto 0 );
-            dp : out std_logic
+            dp : out std_logic;
+            total_money : out std_logic_vector(15 downto 0 )
         ); 
 end entity coin_counter;
 
 architecture coin_counter_arch of coin_counter is
-
-    signal total_money : std_logic_vector(15 downto 0 ) := (others=>'0') ;
 
     signal counter : unsigned (15 downto 0 ) := (others=>'0');
 
@@ -38,7 +37,7 @@ architecture coin_counter_arch of coin_counter is
         -- signals in Basys2
         port( rst : in std_logic; 
                 mclk : in std_logic;
-             word_in : in std_logic_vector(15 downto 0 );
+                word_in : in std_logic_vector(15 downto 0 );
                 seg : out std_logic_vector(6 downto 0 );
                 an : out std_logic_vector(3 downto 0);
                 dp : out std_logic
@@ -50,7 +49,7 @@ begin
     run_money_7seg : money_to_7seg 
         port map ( rst => reset,
                     mclk => mclk,
-                    word_in => total_money,
+                    word_in => std_logic_vector(counter),
                     seg => seg,
                     an => an,
                     dp => dp );
@@ -83,13 +82,10 @@ begin
             -- do stuff
             value := 0;
             if coin_100_in = '1' then
---                counter <= counter + 100;
                 value := 100;
             elsif coin_25_in = '1' then
---                counter <= counter + 25;
                 value := 25;
             elsif coin_10_in = '1' then
---                counter <= counter + 10;
                 value := 10;
             end if;
 
