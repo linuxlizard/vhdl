@@ -252,7 +252,7 @@ begin
                     ticket_chooser_io.led <= X"00";
                     ticket_dispense_io.led <= X"00";
                     display_change_io.led <= X"00";
-                    
+
                     next_state <= STATE_ENTER_MONEY;
 
                 when STATE_ENTER_MONEY =>
@@ -374,6 +374,8 @@ begin
                     -- (ugly hack)
                     user_cancel <= '1';
 
+                    user_change_due <= user_total_money;
+
                     -- led03 turned on 
                     ticket_dispense_io.led <= "00001000";
                     seg <= ticket_dispense_io.seg;
@@ -413,6 +415,7 @@ begin
                     ticket_counter_io.reset <= '1';
                     ticket_dispense_io.reset <= '1';
                     display_change_io.reset <= '1';
+
                     next_state <= STATE_RESET_1;
 
                 when STATE_RESET_1 =>
