@@ -67,10 +67,10 @@ architecture ticket_dispense_arch of ticket_dispense is
 begin
 
     divider : clk_divider
---pragma synthesis off
+        -- pragma synthesis off
         generic map(clkmax => 8) -- simulation
---pragma synthesis on
---        generic map(clkmax => 125000000) -- synthesis
+        -- pragma synthesis on
+        generic map(clkmax => 12500000) -- synthesis
         port map( clk_in => mclk,
                 reset => reset,
                 clk_out => blink_clock );
@@ -116,7 +116,11 @@ begin
             -- blink by turning entire segment on/off
             if blink_clock='0' then
                 -- digits on
-                display_mask <= "1100";
+                if cancel='1' then
+                    display_mask <= "0110";
+                else 
+                    display_mask <= "1100";
+                end if;
             else 
                 -- digits off
                 display_mask <= "0000";
