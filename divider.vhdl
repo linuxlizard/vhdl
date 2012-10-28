@@ -17,7 +17,7 @@ architecture clk_divider_arch of clk_divider is
     signal counter : integer := 0;
     signal curr_clk : std_logic := '0';
 begin
-    behavior : process(clk_in) is
+    behavior : process(reset,clk_in) is
     begin
         if reset='1' then
             counter <= 0;
@@ -25,11 +25,18 @@ begin
         elsif rising_edge(clk_in) then
             counter <= counter + 1;
             if counter=clkmax then
+--                if curr_clk='1' then
+--                    curr_clk <= '0';
+--                else 
+--                    curr_clk <= '1';
+--                end if;
                 curr_clk <= not curr_clk;
                 counter <= 0;
             end if;
         end if;
-        clk_out <= curr_clk;
     end process behavior;
+
+    clk_out <= curr_clk;
+
 end architecture clk_divider_arch;
 
