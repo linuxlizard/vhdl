@@ -87,15 +87,13 @@ architecture run_digits_to_7seg of digits_to_7seg is
           );
     end component SevenSegmentEncoder;
 
-    signal bcd_is_negative : std_logic:='0';
-
+--    signal bcd_is_negative : std_logic:='0'; 
 begin
     -- the actual divider will be 2.1e6 or so (25Mhz down to 15hz)
     run_divider : clk_divider
 --pragma synthesis off
         generic map(clkmax => 4) -- simulation
 --pragma synthesis on
---        generic map(clkmax => 50000) -- synthesis
         port map( clk_in => mclk,
                 reset => rst,
                 clk_out => divider_out_7segmuxor_in );
@@ -104,7 +102,6 @@ begin
         port map ( rst => rst,
                     clk => mclk, 
                     word_in => word_in,
---                    byte_in => "11111100",
                    -- bcd is 20 digits so split into 5 groups of 4
                    bcd_out(19 downto 16) =>  bcd_outnibble4,
                    bcd_out(15 downto 12) =>  bcd_outnibble3,
@@ -117,7 +114,6 @@ begin
     sevenseg_digit3 : SevenSegmentEncoder
         port map ( rst => rst,
                     ck => mclk,
---                    nibble => "0010",
                     nibble => bcd_outnibble0,
                     seg => out7seg3
                 );
@@ -125,7 +121,6 @@ begin
     sevenseg_digit2 : SevenSegmentEncoder
         port map ( rst => rst,
                     ck => mclk,
---                    nibble => "0001",
                     nibble => bcd_outnibble1,
                     seg => out7seg2 
                 );
@@ -133,7 +128,6 @@ begin
     sevenseg_digit1 : SevenSegmentEncoder
         port map ( rst => rst,
                     ck => mclk,
---                    nibble => "0000",
                     nibble => bcd_outnibble2,
                     seg => out7seg1
                 );
@@ -156,12 +150,6 @@ begin
                     digit_2 => out7seg2,
                     digit_3 => out7seg3,
                     decimal_point_mask => "0000",
-
---                    is_negative => '1',
---                   digit_0 => "1111001",
---                   digit_1 => "0100100",
---                    digit_2 => "0110000",
---                    digit_3 => "0011001",
 
                     anode_out => an, -- 7segment display anode
                     digit_out => seg, -- 7segment display segment
