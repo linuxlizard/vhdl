@@ -84,7 +84,10 @@ begin
         -- leave it pressed for a looong time
         wait for 100 ns;
 
-        btn <= add_coin( 10 );
+        btn <= "0000";
+        wait for 20 ns;
+
+        btn <= add_coin( 100 );
         -- leave it pressed for a looong time
         wait for 100 ns;
 
