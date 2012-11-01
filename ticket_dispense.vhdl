@@ -70,7 +70,7 @@ begin
         -- pragma synthesis off
         generic map(clkmax => 8) -- simulation
         -- pragma synthesis on
-        generic map(clkmax => 12500000) -- synthesis
+--        generic map(clkmax => 12500000) -- synthesis
         port map( clk_in => mclk,
                 reset => reset,
                 clk_out => blink_clock );
