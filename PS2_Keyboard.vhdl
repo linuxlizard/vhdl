@@ -50,7 +50,9 @@ entity PS2_Keyboard is
     
     port( ck : in std_logic;
         PS2C: in std_logic;   -- PS2 serial clock 
-        PS2D: in std_logic    -- PS2 serial data 
+        PS2D: in std_logic;    -- PS2 serial data 
+
+        key_code_out : out std_logic_vector(7 downto 0) 
         );
 
 end PS2_Keyboard;
@@ -94,7 +96,7 @@ begin
     end if;
   end process;     
 
-  process (wdg,PS2C)
+  process (ck1,wdg,PS2C)
   begin
     if ck1'event and ck1 = '1' then
       PS2Cold <= PS2C;               -- storing old value of PS2C for edge detection 
@@ -120,6 +122,8 @@ begin
       end if;
     end if;
   end process;
+
+  key_code_out <= key_code;
 
 end architecture PS2_Keyboard_arch;
 
