@@ -1,4 +1,22 @@
-all : test_regrotate test_ssegmuxor test_divider test_sseg \
+#all : test_memory8bit
+all : test_fifo
+
+%.o : %.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+test_fifo : memory8bit.o fifo.o test_fifo.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+test_memory8bit : memory8bit.o test_memory8bit.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+#memory8bit : memory8bit.o
+#	ghdl -m --ieee=synopsys -fexplicit $@
+
+filetst : filetst.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+xall : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_digits_to_7seg\
         test_money_to_7seg test_hex_to_7seg test_coin_counter\
         tb_edge_to_pulse test_ticket_display test_ticket_dispense\
