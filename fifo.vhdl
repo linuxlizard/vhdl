@@ -27,7 +27,7 @@ end entity fifo;
 
 architecture fifo_arch of fifo is
     component memory8bit is
-        generic ( width : integer; depth : integer );
+        generic ( depth : integer );
         port ( clk : in std_logic;
                 write_enable : in std_logic;
                 write_addr : in unsigned(7 downto 0 );
@@ -40,6 +40,8 @@ architecture fifo_arch of fifo is
     signal write_en : std_logic := '0';
     signal ram_write_addr : unsigned(7 downto 0 ) := (others=>'0');
     signal ram_read_addr : unsigned(7 downto 0 ) := (others=>'0');
+
+    signal debug_count : integer;
 
 begin
     fifomem : memory8bit
@@ -76,6 +78,7 @@ begin
             write_en <= '0';
             full <= '0';
             empty <= '0';
+            debug_count <= count;
             
             if( push='1' ) then
                 if( count < depth ) then

@@ -132,6 +132,11 @@ begin
             writeline( output, str );
 
             wait for 20 ns;
+
+--            assert t_read_data=to_unsigned(i+10,8) 
+--                    report integer'image(to_integer(t_read_data))
+--                    severity failure;
+
         end loop;
         assert t_empty='1' severity failure;
         assert t_full='0' severity failure;
@@ -149,6 +154,22 @@ begin
         wait for 60 ns;
         t_pop <= '1';
         wait for 20 ns;
+        t_pop <= '0';
+        wait for 20 ns;
+
+        wait for 100 ns;
+
+        -- push/pop simultaneously
+        t_push <= '1';
+        t_write_data <= X"ab";
+        wait for 20 ns;
+
+        t_pop <= '1';
+        t_push <= '1';
+        t_write_data <= X"cd";
+        wait for 20 ns;
+
+        t_push <= '0';
         t_pop <= '0';
         wait for 20 ns;
 
