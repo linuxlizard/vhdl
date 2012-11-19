@@ -1,8 +1,12 @@
 #all : test_memory8bit
-all : test_fifo
+all : clocksync test_fifo
+#all : test_fifo
 
 %.o : %.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
+
+clocksync : clocksync.o d_ff.o
+	ghdl -m --ieee=synopsys -fexplicit $@
 
 test_fifo : memory8bit.o fifo.o test_fifo.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -250,4 +254,5 @@ dbg.o : dbg.vhdl
 
 clean :
 	ghdl --clean
+	ghdl --remove
 
