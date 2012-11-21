@@ -17,21 +17,21 @@ architecture clock_sync_test_arch of clocksync is
     component d_ff is
         port (clk : in std_logic;
                 reset : in std_logic;
-                d : in std_logic;
-                q : out std_logic );
+                d : in std_logic_vector(7 downto 0);
+                q : out std_logic_vector(7 downto 0) );
     end component d_ff;
 
-    signal data_in : std_logic;
+    signal data_in : std_logic_vector(7 downto 0);
 
     signal reset : std_logic := '1';
 
     signal clk1 : std_logic := '0';
     signal clk2 : std_logic := '0';
 
-    signal source_to_Q1 : std_logic;
-    signal Q1_to_Q2 : std_logic;
+    signal source_to_Q1 : std_logic_vector(7 downto 0);
+    signal Q1_to_Q2 : std_logic_vector(7 downto 0);
 
-    signal sync_out : std_logic;
+    signal data_out : std_logic_vector(7 downto 0);
 begin
     clock1 : process is
     begin
@@ -60,7 +60,7 @@ begin
         port map( clk => clk2,
                   reset => reset,
                   d => Q1_to_Q2,
-                  q => sync_out );
+                  q => data_out );
 
     stimulus : process is
         variable str : line;
@@ -68,22 +68,23 @@ begin
     begin
         write( str, string'("hello, world") );
         writeline( output, str );
-        data_in <= '0';
+        data_in <= X"aa";
         wait for 10 ns;
 
         reset <= '0';
-        data_in <= '1';
+        data_in <= X"bb";
         wait for 10 ns;
 
         for i in 1 to 10 loop
-            data_in <= '0';
-            wait for i*10 ns;
+            data_in <= std_logic_vector(to_unsigned(i,8));
+            wait for 10 ns;
+--            wait for i*10 ns;
 
-            data_in <= '1';
-            wait for i*10 ns;
+--            data_in <= std_logic_vector(to_unsigned(i*2,8));
+--            wait for i*10 ns;
         end loop;
 
-        data_in <= '0';
+        data_in <= x"ee";
         wait for 10 ns;
 
         report "test done";  
