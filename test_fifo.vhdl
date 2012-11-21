@@ -14,11 +14,14 @@ entity test_fifo is
 end entity test_fifo;
 
 architecture test_fifo_arch of test_fifo is
-    constant fifo_depth : integer := 32;
+    constant fifo_depth : integer := 16;
+    constant period : time := 10 ns;
+    constant half_period : time := 5 ns;
 
     component fifo is
         generic ( depth : integer );
-        port( clk : in std_logic;
+        port( write_clk : in std_logic;
+                read_clk : in std_logic;
                 reset : in std_logic;
                 push : in std_logic;
                 write_data : in unsigned ( 7 downto 0 );
@@ -41,10 +44,29 @@ architecture test_fifo_arch of test_fifo is
     signal t_full : std_logic;
     signal t_empty : std_logic;
 
+    signal clk1 : std_logic := '0';
+    signal clk2 : std_logic := '0';
+
 begin
+    clock1 : process is
+    begin
+       clk1 <= '0'; wait for 5 ns;
+       clk1 <= '1'; wait for 5 ns;
+    end process clock1;
+
+    clock2 : process is
+    begin
+       clk2 <= '0'; wait for 7 ns;
+       clk2 <= '1'; wait for 7 ns;
+    end process clock2;
+
     run_fifo : fifo
         generic map(depth=>fifo_depth)
-        port map ( clk=>mclk,
+        port map ( 
+                    write_clk=>clk1,
+--                    write_clk=>clk1,
+                    read_clk => clk2,
+
                     reset => reset,
                     push => t_push,
                     write_data => t_write_data,
@@ -55,11 +77,13 @@ begin
                     full => t_full,
                     empty => t_empty );
 
-    clock : process is
-    begin
-       mclk <= '0'; wait for 10 ns;
-       mclk <= '1'; wait for 10 ns;
-    end process clock;
+--    clock : process is
+--    begin
+--       mclk <= '0'; wait for 10 ns;
+--       mclk <= '1'; wait for 10 ns;
+--    end process clock;
+
+--    mclk <= write_clk;
 
     -- Watch the full flag, print a status when the flag changes
     watch_full: process(t_full)
@@ -104,7 +128,7 @@ begin
     begin
         write( str, string'("hello, world") );
         writeline( output, str );
-        wait for 5 ns;
+        wait for period;
 
         reset <= '0';
         wait for 10 ns;
@@ -116,12 +140,16 @@ begin
             writeline( output, str );
 
             t_write_data <= to_unsigned(i+10,8);
-            wait for 20 ns;
+            wait for period;
+
+--            assert t_full='0' severity failure;
+--            assert t_empty='0' severity failure;
         end loop;
         t_push <= '0';
-        wait for 20 ns;
+        wait for period; 
         assert t_full='1' severity failure;
         assert t_empty='0' severity failure;
+        wait for period * 10; 
 
         -- Empty the FIFO
         t_pop <= '1';
@@ -131,47 +159,63 @@ begin
             hwrite( str, std_logic_vector(t_read_data) );
             writeline( output, str );
 
-            wait for 20 ns;
+            wait for period;
 
---            assert t_read_data=to_unsigned(i+10,8) 
---                    report integer'image(to_integer(t_read_data))
---                    severity failure;
+            assert t_read_data=to_unsigned(i+10,8) 
+                    report integer'image(to_integer(t_read_data))
+                    severity failure;
 
         end loop;
+
         assert t_empty='1' severity failure;
         assert t_full='0' severity failure;
         t_pop <= '0';
-        wait for 20 ns;
+        wait for period;
 
-        wait for 100 ns;
+        wait for period*10;
 
         -- push/pop with delays between
         t_push <= '1';
         t_write_data <= X"dd";
-        wait for 20 ns;
+        wait for period;
         t_push <= '0';
-
-        wait for 60 ns;
+        wait for period*3;
         t_pop <= '1';
-        wait for 20 ns;
+        wait for period;
         t_pop <= '0';
-        wait for 20 ns;
+        wait for period;
 
-        wait for 100 ns;
+        wait for period*10;
 
         -- push/pop simultaneously
         t_push <= '1';
         t_write_data <= X"ab";
-        wait for 20 ns;
+        wait for period;
 
+        -- The Big Enchilada! Simultaneous read/write
         t_pop <= '1';
         t_push <= '1';
         t_write_data <= X"cd";
-        wait for 20 ns;
+        wait for period;
+
+        assert t_read_data=X"ab"
+                report integer'image(to_integer(t_read_data))
+                severity failure;
 
         t_push <= '0';
         t_pop <= '0';
-        wait for 20 ns;
+        wait for period;
+
+        -- pop the final value
+        t_pop <= '1';
+        wait for period;
+        t_pop <= '0';
+        wait for period;
+        assert t_read_data=X"cd"
+                report integer'image(to_integer(t_read_data))
+                severity failure;
+        assert t_empty='1' severity failure;
+        wait for period;
 
         report "test done";  
         wait;
