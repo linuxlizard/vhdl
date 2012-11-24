@@ -31,20 +31,6 @@ entity fifo is
 end entity fifo;
 
 architecture fifo_arch of fifo is
---    component memory8bit is
---        generic ( depth : integer );
---        port ( clk : in std_logic;
---                write_enable : in std_logic;
---                write_addr : in unsigned(7 downto 0 );
---                read_addr : in unsigned(7 downto 0 );
---                data_in : in unsigned( 7 downto 0 );
---                data_out : out unsigned( 7 downto 0 )
---             );
---    end component memory8bit;
-
---    signal write_en : std_logic := '0';
---    signal ram_write_addr : unsigned(7 downto 0 ) := (others=>'0');
---    signal ram_read_addr : unsigned(7 downto 0 ) := (others=>'0');
 
     signal debug_count : integer;
 
@@ -53,17 +39,6 @@ architecture fifo_arch of fifo is
     type mem_array is array (0 to depth-1) of unsigned(7 downto 0 );
     signal RAM : mem_array;
 begin
---    fifomem : memory8bit
---        generic map( depth => depth )
---        port map ( clk => clk,
---                   write_enable => write_en,
---                   write_addr => ram_write_addr,
---                   data_in => write_data ,
---
---                   read_addr => ram_read_addr,
---                   data_out => read_data 
---                );
---
     clk <= write_clk;
 
     run_fifo : process(reset,clk) is
@@ -76,9 +51,6 @@ begin
         constant max_idx : integer := depth-1;
     begin
         if( reset='1' ) then
---            write_en <= '0';
---            ram_write_addr <= (others=>'0');
---            ram_read_addr <= (others=>'0');
             full <= '0';
             empty <= '1';
 
@@ -86,7 +58,6 @@ begin
             wr_idx := 0;
             rd_idx := 0;
         elsif( rising_edge(clk) ) then
---            write_en <= '0';
             full <= '0';
             empty <= '0';
             debug_count <= count;
