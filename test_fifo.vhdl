@@ -20,7 +20,8 @@ architecture test_fifo_arch of test_fifo is
     constant half_period : time := 5 ns;
 
     component fifo is
-        generic ( depth : integer ; numbits : integer );
+        generic ( depth : integer ; 
+                  numbits : integer );
         port( write_clk : in std_logic;
                 read_clk : in std_logic;
                 reset : in std_logic;
@@ -64,7 +65,8 @@ begin
     end process clock2;
 
     run_fifo : fifo
-        generic map(depth=>fifo_depth)
+        generic map( depth=>fifo_depth,
+                     numbits => fifo_num_bits)
         port map ( 
                     write_clk=>'0',
 --                    write_clk=>clk1,
