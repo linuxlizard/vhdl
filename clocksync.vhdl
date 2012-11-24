@@ -22,21 +22,21 @@ architecture clock_sync_test_arch of clocksync is
     component d_ff is
         port (clk : in std_logic;
                 reset : in std_logic;
-                d : in std_logic_vector(7 downto 0);
-                q : out std_logic_vector(7 downto 0) );
+                d : in unsigned(7 downto 0);
+                q : out unsigned(7 downto 0) );
     end component d_ff;
 
-    signal data_in : std_logic_vector(7 downto 0);
+    signal data_in : unsigned(7 downto 0);
 
     signal reset : std_logic := '1';
 
     signal clk1 : std_logic := '0';
     signal clk2 : std_logic := '0';
 
-    signal source_to_Q1 : std_logic_vector(7 downto 0);
-    signal Q1_to_Q2 : std_logic_vector(7 downto 0);
+    signal source_to_Q1 : unsigned(7 downto 0);
+    signal Q1_to_Q2 : unsigned(7 downto 0);
 
-    signal data_out : std_logic_vector(7 downto 0);
+    signal data_out : unsigned(7 downto 0);
 begin
     clock1 : process is
     begin
@@ -85,7 +85,7 @@ begin
         wait for 2*clk1_cycle;
 
         for i in 1 to 10 loop
-            data_in <= std_logic_vector(to_unsigned(i,8));
+            data_in <= to_unsigned(i,8);
             wait for 2*clk1_cycle;
 --            wait for i*10 ns;
 
