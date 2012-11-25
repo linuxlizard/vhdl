@@ -8,7 +8,7 @@ all : clocksync test_fifo
 clocksync : clocksync.o d_ff.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 
-test_fifo : memory8bit.o fifo.o test_fifo.o
+test_fifo : d_ff.o fifo.o test_fifo.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 
 test_memory8bit : memory8bit.o test_memory8bit.o
