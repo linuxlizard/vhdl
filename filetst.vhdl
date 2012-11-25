@@ -15,7 +15,9 @@ begin
 end entity filetst;
 
 architecture filetst_arch of filetst is
+    constant test_filename : string := "test.dat";
 begin
+
     run_filetst : process is
         file fin : text;
         variable s : line;
@@ -27,7 +29,8 @@ begin
         variable word_value : std_logic_vector(7 downto 0);
         variable num : integer;
     begin
-        file_open( fin, "test.dat", READ_MODE );
+        file_open( fin, test_filename, READ_MODE );
+--        file_open( fin, "test.dat", READ_MODE );
         while not endfile( fin ) loop
             readline( fin, s );
 
