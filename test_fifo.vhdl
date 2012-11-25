@@ -19,6 +19,9 @@ architecture test_fifo_arch of test_fifo is
     constant period : time := 10 ns;
     constant half_period : time := 5 ns;
 
+    constant read_clk_period : time := 14 ns;
+    constant read_clk_half_period : time := 7 ns;
+
     component fifo is
         generic ( depth : integer ; 
                   numbits : integer );
@@ -48,30 +51,30 @@ architecture test_fifo_arch of test_fifo is
     signal t_full : std_logic;
     signal t_empty : std_logic;
 
-    signal clk1 : std_logic := '0';
-    signal clk2 : std_logic := '0';
+    signal write_clk : std_logic := '0';
+    signal read_clk : std_logic := '0';
 
+    -- debugging
+    signal test_num : integer := 0;
 begin
     clock1 : process is
     begin
-       clk1 <= '0'; wait for 5 ns;
-       clk1 <= '1'; wait for 5 ns;
+       write_clk <= '0'; wait for 5 ns;
+       write_clk <= '1'; wait for 5 ns;
     end process clock1;
 
     clock2 : process is
     begin
-       clk2 <= '0'; wait for 7 ns;
-       clk2 <= '1'; wait for 7 ns;
+       read_clk <= '0'; wait for 7 ns;
+       read_clk <= '1'; wait for 7 ns;
     end process clock2;
 
     run_fifo : fifo
         generic map( depth=>fifo_depth,
                      numbits => fifo_num_bits)
         port map ( 
-                    write_clk=>'0',
---                    write_clk=>clk1,
-                    read_clk => '0',
---                    read_clk => clk2,
+                    write_clk=>write_clk,
+                    read_clk => read_clk,
 
                     reset => reset,
                     push => t_push,
@@ -94,41 +97,41 @@ begin
 --    mclk <= write_clk;
 
     -- Watch the full flag, print a status when the flag changes
---    watch_full: process(t_full)
---        variable str : line;
---    begin
---        if t_full='1' then
---            write( str, string'("fifo full at ") );
---        else
---            write( str, string'("fifo not full at "));
---        end if;
---        write( str, NOW );
---        writeline( output, str );
---    end process watch_full;
+    watch_full: process(t_full)
+        variable str : line;
+    begin
+        if t_full='1' then
+            write( str, string'("fifo full at ") );
+        else
+            write( str, string'("fifo not full at "));
+        end if;
+        write( str, NOW );
+        writeline( output, str );
+    end process watch_full;
 
     -- Watch the empty flag, print a status when the flag changes
---    watch_empty : process(t_empty)
---        variable str : line;
---    begin
---        if t_empty='1' then
---            write( str, string'("fifo empty at "));
---        else
---            write( str, string'("fifo not empty at "));
---        end if;
---        write( str, NOW );
---        writeline( output, str );
---    end process watch_empty;
+    watch_empty : process(t_empty)
+        variable str : line;
+    begin
+        if t_empty='1' then
+            write( str, string'("fifo empty at "));
+        else
+            write( str, string'("fifo not empty at "));
+        end if;
+        write( str, NOW );
+        writeline( output, str );
+    end process watch_empty;
 
     -- watch the read bus 
---    watch_read : process(t_read_data) 
---        variable str : line;
---    begin
---        write( str, string'("read_data=0x") );
---        hwrite( str, std_logic_vector(t_read_data) );
---        write( str, string'(" at ") );
---        write( str, NOW );
---        writeline( output, str );
---    end process watch_read;
+    watch_read : process(t_read_data) 
+        variable str : line;
+    begin
+        write( str, string'("read_data=0x") );
+        hwrite( str, std_logic_vector(t_read_data) );
+        write( str, string'(" at ") );
+        write( str, NOW );
+        writeline( output, str );
+    end process watch_read;
 
     stimulus : process 
         variable i : integer;
@@ -140,16 +143,21 @@ begin
 
         reset <= '0';
         wait for 10 ns;
-        wait;
+
+        assert t_full='0' severity failure;
+        assert t_empty='1' severity failure;
 
         -- Fill the FIFO
+        test_num <= 1;
         t_push <= '1';
-        for i in 0 to fifo_depth-1 loop 
+        for i in 0 to fifo_depth-2 loop 
             write( str, string'("i=") & integer'image(i) );
             writeline( output, str );
 
             t_write_data <= to_unsigned(i+10,8);
             wait for period;
+
+            assert t_read_valid='0' severity failure;
 
 --            assert t_full='0' severity failure;
 --            assert t_empty='0' severity failure;
@@ -158,21 +166,26 @@ begin
         wait for period; 
         assert t_full='1' severity failure;
         assert t_empty='0' severity failure;
+        assert t_read_valid='0' severity failure;
         wait for period * 10; 
 
-        -- Empty the FIFO
+        -- Empty the FIFO (change the test stimulous to the 2nd clock)
+        test_num <= 2;
+        wait until read_clk='0';
         t_pop <= '1';
-        for i in 0 to fifo_depth-1 loop 
+        for i in 0 to fifo_depth-2 loop 
             write( str, string'("i=") & integer'image(i) );
             write( str, string'(" read=0x") );
             hwrite( str, std_logic_vector(t_read_data) );
             writeline( output, str );
 
-            wait for period;
+            wait for read_clk_period;
 
             assert t_read_data=to_unsigned(i+10,8) 
                     report integer'image(to_integer(t_read_data))
                     severity failure;
+
+            assert t_read_valid='1' severity failure;
 
         end loop;
 
@@ -180,10 +193,12 @@ begin
         assert t_full='0' severity failure;
         t_pop <= '0';
         wait for period;
+        assert t_read_valid='0' severity failure;
 
         wait for period*10;
 
         -- push/pop with delays between
+        test_num <= 3;
         t_push <= '1';
         t_write_data <= X"dd";
         wait for period;
@@ -191,22 +206,35 @@ begin
         wait for period*3;
         t_pop <= '1';
         wait for period;
+        wait until t_read_valid='1';
+
         t_pop <= '0';
         wait for period;
 
         wait for period*10;
 
         -- push/pop simultaneously
+        -- first load the queue with a few elements so we have something to pop
+        -- while we're pusing
+        -- XXX the full/empty is currently delayed while the indexes clock
+        -- between read/write sides
+        test_num <= 4;
         t_push <= '1';
         t_write_data <= X"ab";
         wait for period;
 
         -- The Big Enchilada! Simultaneous read/write
+        test_num <= 5;
         t_pop <= '1';
         t_push <= '1';
         t_write_data <= X"cd";
+        -- give system time to respond
         wait for period;
+        -- wait for falling edge of the read clock
+        wait until read_clk='0';
+        wait until t_empty='0';
 
+        assert t_read_valid='1' severity failure;
         assert t_read_data=X"ab"
                 report integer'image(to_integer(t_read_data))
                 severity failure;
@@ -216,10 +244,14 @@ begin
         wait for period;
 
         -- pop the final value
+        test_num <= 6;
         t_pop <= '1';
         wait for period;
         t_pop <= '0';
         wait for period;
+        -- wait for falling edge of the read clock
+        wait until read_clk='0';
+        assert t_read_valid='1' severity failure;
         assert t_read_data=X"cd"
                 report integer'image(to_integer(t_read_data))
                 severity failure;
