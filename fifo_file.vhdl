@@ -18,8 +18,8 @@ architecture fifo_file_arch of fifo_file is
     constant infilename : string := "test.dat";
     constant outfilename : string := "result.dat";
 
-    constant fifo_depth : integer := 16;
-    constant fifo_num_bits : integer := 4; -- 2**fifo_num_bits = fifo_depth
+    constant fifo_depth : integer := 32;
+    constant fifo_num_bits : integer := 5; -- 2**fifo_num_bits = fifo_depth
 
     constant write_clk_period : time := 10 ns;
     constant write_clk_half_period : time := 5 ns;
@@ -158,18 +158,20 @@ begin
                 -- FIXME I'm getting " rr" and " ww" (note extra spaces)
                 -- because the file read is getting the strings slightly off
                 if wait_clock=" rr" then
+                    -- wait on the read clock
                     wait until read_clk='0';
                     for i in 0 to wait_cycles-1 loop
                         wait until read_clk='0';
                     end loop;
                 elsif wait_clock=" ww" then
+                    -- wait on the the write clock 
                     wait until write_clk='0';
                     for i in 0 to wait_cycles-1 loop
                         wait until write_clk='0';
                     end loop;
                 else
                     assert 1=0 
-                        report "bad wait clock *" & wait_clock & "*"
+                        report "bad wait clock """ & wait_clock & """"
                         severity failure;
                 end if;
 
