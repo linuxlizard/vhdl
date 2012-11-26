@@ -21,11 +21,10 @@ architecture fifo_file_arch of fifo_file is
     constant fifo_depth : integer := 32;
     constant fifo_num_bits : integer := 5; -- 2**fifo_num_bits = fifo_depth
 
+--    constant write_clk_period : time := 14 ns;
+--    constant read_clk_period : time := 10 ns;
     constant write_clk_period : time := 10 ns;
-    constant write_clk_half_period : time := 5 ns;
-
     constant read_clk_period : time := 14 ns;
-    constant read_clk_half_period : time := 7 ns;
 
     component fifo is
         generic ( depth : integer ; 
@@ -127,16 +126,16 @@ begin
             if( read_clk='1' and t_read_valid='1' ) then
                 data_write( fout, string'("rr"),
                             -- leave the write field blank
-                            string'(" "),
+                            string'("--"),
                             integer'image(to_integer(t_read_data)),
                             t_empty,
                             t_full  );
             end if;
-            if( write_clk='1' ) then
+            if( write_clk='1' and t_push='1' ) then
                 data_write( fout, string'("ww"),
                             integer'image(to_integer(t_write_data)),
                             -- leave the read field blank
-                            string'(" "),
+                            string'("--"),
                             t_empty,
                             t_full  );
             end if;
@@ -181,8 +180,6 @@ begin
                     wait until write_clk='0';
                     t_push <= '1';
                     t_write_data <= unsigned(word_value);
---                    wait for write_clk_period;
---                    t_push <= '0';
                     for i in 0 to word_count-1 loop
                         wait until write_clk='0';
                     end loop;
