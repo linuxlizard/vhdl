@@ -222,6 +222,9 @@ begin
         t_push <= '1';
         t_write_data <= X"ab";
         wait for period;
+        t_push <= '0';
+        wait until t_empty='0';
+        wait until read_clk='0' and write_clk='0';
 
         -- The Big Enchilada! Simultaneous read/write
         test_num <= 5;
@@ -230,9 +233,10 @@ begin
         t_write_data <= X"cd";
         -- give system time to respond
         wait for period;
+        t_push <= '0';
         -- wait for falling edge of the read clock
         wait until read_clk='0';
-        wait until t_empty='0';
+        t_pop <= '0';
 
         assert t_read_valid='1' severity failure;
         assert t_read_data=X"ab"
