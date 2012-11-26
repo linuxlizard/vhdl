@@ -44,6 +44,23 @@ architecture fifo_file_arch of fifo_file is
                 empty : out std_logic );
     end component fifo;
 
+    procedure data_write( 
+                    fout : inout text;
+                    clock_type : in string;
+                    data_wr : in string;
+                    data_rd : in string;
+                    empty_flag : in std_logic;
+                    full_flag : in std_logic) is
+        variable str : line;
+    begin
+        write( str, clock_type );
+        write( str, data_wr, field => 12 );
+        write( str, data_rd, field => 12 );
+        write( str, empty_flag, field => 12 );
+        write( str, full_flag, field => 12 );
+        writeline( fout, str );
+    end;
+
     signal reset : std_logic := '1';
     signal write_clk : std_logic := '0';
     signal read_clk : std_logic := '0';
@@ -61,6 +78,7 @@ architecture fifo_file_arch of fifo_file is
 
     -- debugging
     signal test_file_line_number : integer := 0;
+
 begin
     clock1 : process is
     begin
@@ -92,8 +110,44 @@ begin
                     full => t_full,
                     empty => t_empty );
 
+    file_writer : process is
+        file fout : text;
+        variable str : line;
+        variable empty_str, full_str : line;
+    begin
+        file_open( fout, outfilename, WRITE_MODE );
+        write( str, string'("Clock Type   Data Wr    Data_rd    Empty_Flag    Full_Flag") );
+        writeline( fout, str );
+
+        wait until reset='0';
+
+        loop 
+            wait until read_clk='1' or write_clk='1';
+
+            if( read_clk='1' and t_read_valid='1' ) then
+                data_write( fout, string'("rr"),
+                            -- leave the write field blank
+                            string'(" "),
+                            integer'image(to_integer(t_read_data)),
+                            t_empty,
+                            t_full  );
+            end if;
+            if( write_clk='1' ) then
+                data_write( fout, string'("ww"),
+                            integer'image(to_integer(t_write_data)),
+                            -- leave the read field blank
+                            string'(" "),
+                            t_empty,
+                            t_full  );
+            end if;
+
+        end loop;
+
+        file_close( fout );
+    end process file_writer;
+
     run_filetst : process is
-        file fin, fout : text;
+        file fin : text;
         variable s : line;
         variable str, hstr : line;
         variable op : string(1 to 4);
@@ -108,7 +162,6 @@ begin
 
         line_number := 0;
         file_open( fin, infilename, READ_MODE );
-        file_open( fout, outfilename, WRITE_MODE );
 
         while not endfile( fin ) loop
             readline( fin, s );
@@ -184,7 +237,6 @@ begin
         end loop;
 
         file_close( fin );
-        file_close( fout );
 
         wait;
     end process run_filetst;
