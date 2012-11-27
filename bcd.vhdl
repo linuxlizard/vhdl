@@ -62,10 +62,10 @@ architecture bcd_encoder_arch of bcd_encoder is
 
     signal internal_bcd_out : std_logic_vector(19 downto 0) := (others=>'0');
 --    signal internal_negative_out : std_logic := '0';
-    signal num : unsigned(7 downto 0) := (others=>'0');
+--    signal num : unsigned(7 downto 0) := (others=>'0');
 begin
 
-    convert_to_bcd : process(clk) is
+    convert_to_bcd : process(rst,clk) is
         variable str : line;
     begin
         if rst='1' then
@@ -88,9 +88,10 @@ begin
 				
         end if;
 		
-        bcd_out <= internal_bcd_out;
 --        negative_out <= internal_negative_out;
     end process convert_to_bcd;
+
+    bcd_out <= internal_bcd_out;
 
 end architecture bcd_encoder_arch;
 

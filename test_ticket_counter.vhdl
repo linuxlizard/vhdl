@@ -40,7 +40,7 @@ architecture test_ticket_counter_arch of test_ticket_counter is
     end component ticket_counter;
 
     constant btn_none : std_logic_vector(3 downto 0) := "0000";
-    constant btn_up : std_logic_vector(3 downto 0) := "0001";
+    constant btn_up : std_logic_vector(3 downto 0) := "0010";
     constant btn_down : std_logic_vector(3 downto 0) := "0001";
 begin
     uut_ticket_counter : ticket_counter
@@ -92,7 +92,54 @@ begin
         write( str, user_ticket_count );
         writeline(output,str );
 
+        btn <= btn_none;
+        wait for 20 ns;
+
+        btn <= btn_down;
+        -- leave it pressed for a looong time
+        wait for 100 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
+
+        btn <= btn_none;
+        wait for 20 ns;
+
+        btn <= btn_down;
+        -- leave it pressed for a looong time
+        wait for 100 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
+
         btn <= btn_up;
+        -- leave it pressed for a looong time
+        wait for 100 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
+
+        btn <= btn_down;
+        -- leave it pressed for a looong time
+        wait for 100 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
+
+        btn <= btn_none;
+        wait for 20 ns;
+
+        btn <= btn_down;
+        -- leave it pressed for a looong time
+        wait for 100 ns;
+        write( str, string'("ticket_count=") );
+        write( str, user_ticket_count );
+        writeline(output,str );
+
+        btn <= btn_none;
+        wait for 20 ns;
+
+        btn <= btn_down;
         -- leave it pressed for a looong time
         wait for 100 ns;
         write( str, string'("ticket_count=") );

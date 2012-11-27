@@ -86,7 +86,7 @@ architecture run_hex_to_7seg of hex_to_7seg is
           );
     end component SevenSegmentEncoder;
 
-    signal bcd_is_negative : std_logic:='0';
+--    signal bcd_is_negative : std_logic:='0';
 
 begin
 

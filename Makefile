@@ -1,8 +1,38 @@
-all : test_regrotate test_ssegmuxor test_divider test_sseg \
+#all : test_memory8bit
+all : clocksync test_fifo fifo_file
+#all : test_fifo
+
+%.o : %.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
+
+clocksync : clocksync.o d_ff.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+fifo_file : d_ff.o fifo.o fifo_file.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+test_fifo : d_ff.o fifo.o test_fifo.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+test_memory8bit : memory8bit.o test_memory8bit.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+#memory8bit : memory8bit.o
+#	ghdl -m --ieee=synopsys -fexplicit $@
+
+filetst : filetst.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+xall : test_regrotate test_ssegmuxor test_divider test_sseg \
         test_counter test_bcd test_register test_digits_to_7seg\
         test_money_to_7seg test_hex_to_7seg test_coin_counter\
         tb_edge_to_pulse test_ticket_display test_ticket_dispense\
-        test_ticket_counter basys2
+        test_ticket_counter basys2 PS2_Keyboard
+
+PS2_Keyboard : PS2_Keyboard.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+PS2_Keyboard.o : PS2_Keyboard.vhdl
+	ghdl -a --ieee=synopsys -fexplicit $<
 
 tb_edge_to_pulse : edge_to_pulse.o tb_Edge_to_Pulse.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -227,4 +257,5 @@ dbg.o : dbg.vhdl
 
 clean :
 	ghdl --clean
+	ghdl --remove
 
