@@ -1,3 +1,8 @@
+-- Subway Tickets.
+--
+-- ECE 4/530 Fall 2012.
+--
+-- VHDL Project #1
 --
 -- David Poole 21-Oct-2012
 
