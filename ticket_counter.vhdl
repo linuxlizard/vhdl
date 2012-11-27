@@ -1,4 +1,9 @@
 -- Ticket Counter. 
+--
+-- ECE 4/530 Fall 2012.
+--
+-- VHDL Project #1
+--
 -- davep 20-Oct-2012
 
 library ieee;
