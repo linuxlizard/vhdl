@@ -235,6 +235,7 @@ begin
 
         file_close( fin );
 
+        report "test done";  
         wait;
     end process run_filetst;
 
