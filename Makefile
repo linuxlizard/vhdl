@@ -1,6 +1,6 @@
 #all : test_memory8bit
-all : clocksync test_fifo fifo_file
-#all : test_fifo
+#all : clocksync test_fifo fifo_file
+all : test_rs232
 
 %.o : %.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
@@ -9,6 +9,9 @@ clocksync : clocksync.o d_ff.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 
 fifo_file : d_ff.o fifo.o fifo_file.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+test_rs232 : divider.o rs232.o test_rs232.o
 	ghdl -m --ieee=synopsys -fexplicit $@
 
 test_fifo : d_ff.o fifo.o test_fifo.o
