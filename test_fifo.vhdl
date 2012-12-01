@@ -18,10 +18,10 @@ architecture test_fifo_arch of test_fifo is
     constant fifo_num_bits : integer := 4; -- 2**fifo_num_bits = fifo_depth
 --    constant half_period : time := 5 ns;
 
-    constant write_clk_period : time := 14 ns;
-    constant read_clk_period : time := 10 ns;
---    constant write_clk_period : time := 10 ns;
---    constant read_clk_period : time := 14 ns;
+--    constant write_clk_period : time := 14 ns;
+--    constant read_clk_period : time := 10 ns;
+    constant write_clk_period : time := 10 ns;
+    constant read_clk_period : time := 14 ns;
 
     component fifo is
         generic ( depth : integer ; 
@@ -57,17 +57,18 @@ architecture test_fifo_arch of test_fifo is
 
     -- debugging
     signal test_num : integer := 0;
+    signal t_write_counter : integer;
 begin
     clock1 : process is
     begin
-       write_clk <= '0'; wait for 5 ns;
-       write_clk <= '1'; wait for 5 ns;
+       write_clk <= '0'; wait for write_clk_period/2;
+       write_clk <= '1'; wait for write_clk_period/2;
     end process clock1;
 
     clock2 : process is
     begin
-       read_clk <= '0'; wait for 7 ns;
-       read_clk <= '1'; wait for 7 ns;
+       read_clk <= '0'; wait for read_clk_period/2;
+       read_clk <= '1'; wait for read_clk_period/2;
     end process clock2;
 
     run_fifo : fifo
@@ -137,13 +138,14 @@ begin
     stimulus : process 
         variable i : integer;
         variable str : line;
+        variable write_counter : integer := 0;
     begin
         write( str, string'("hello, world") );
         writeline( output, str );
         wait for write_clk_period;
 
         reset <= '0';
-        wait for 10 ns;
+        wait for write_clk_period;
 
         assert t_full='0' severity failure;
         assert t_empty='1' severity failure;
@@ -156,6 +158,8 @@ begin
             writeline( output, str );
 
             t_write_data <= to_unsigned(i+10,8);
+            write_counter := write_counter + 1;
+            t_write_counter <= write_counter;
             wait for write_clk_period;
 
             assert t_read_valid='0' severity failure;
@@ -171,9 +175,12 @@ begin
         wait for write_clk_period * 10; 
 
         -- Empty the FIFO (change the test stimulous to the 2nd clock)
+        write( str, string'("starting to read from FIFO"));
+        writeline(output,str);
         test_num <= 2;
         wait until read_clk='0';
         t_pop <= '1';
+        wait until t_read_valid='1';
         for i in 0 to fifo_depth-2 loop 
             write( str, string'("i=") & integer'image(i) );
             write( str, string'(" read=0x") );
@@ -181,13 +188,9 @@ begin
             writeline( output, str );
 
             wait for read_clk_period;
-
---            assert t_read_data=to_unsigned(i+10,8) 
---                    report integer'image(to_integer(t_read_data))
---                    severity failure;
---
-            assert t_read_valid='1' severity failure;
-
+            assert t_read_data=to_unsigned(i+10,8) 
+                    report integer'image(to_integer(t_read_data))
+                    severity failure;
         end loop;
 
         assert t_empty='1' severity failure;
@@ -206,7 +209,7 @@ begin
         t_push <= '0';
         wait for write_clk_period*3;
         t_pop <= '1';
-        wait for write_clk_period;
+--        wait for write_clk_period;
         wait until t_read_valid='1';
 
         t_pop <= '0';
@@ -216,7 +219,7 @@ begin
 
         -- push/pop simultaneously
         -- first load the queue with a few elements so we have something to pop
-        -- while we're pusing
+        -- while we're pushing
         -- XXX the full/empty is currently delayed while the indexes clock
         -- between read/write sides
         test_num <= 4;
@@ -248,14 +251,17 @@ begin
         t_pop <= '0';
         wait for write_clk_period;
 
+        wait until t_empty='0';
+
         -- pop the final value
+        wait until read_clk='0';
         test_num <= 6;
         t_pop <= '1';
-        wait for write_clk_period;
+        wait for read_clk_period;
         t_pop <= '0';
-        wait for write_clk_period;
-        -- wait for falling edge of the read clock
-        wait until read_clk='0';
+--        wait for write_clk_period;
+        -- wait for data
+--        wait until t_read_valid='1';
         assert t_read_valid='1' 
                 report string'("bad read valid flag")
                 severity failure;
@@ -264,6 +270,8 @@ begin
                 severity failure;
         assert t_empty='1' severity failure;
         wait for write_clk_period;
+
+        test_num <= 4242;
 
         report "test done";  
         wait;
