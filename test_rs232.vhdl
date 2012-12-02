@@ -1,4 +1,4 @@
--- RAM read/write
+-- Test RS232 in Simulation
 -- ECE530 Fall 2012
 --
 -- David Poole
@@ -23,7 +23,8 @@ architecture test_rs232_arch of test_rs232 is
                 data_out : in unsigned(7 downto 0) ;
 
                 -- outputs
-                tx : out std_logic
+                tx : out std_logic;
+                full : out std_logic
              );
     end component rs232;
 
@@ -33,14 +34,15 @@ architecture test_rs232_arch of test_rs232 is
     signal t_write_data : unsigned (7 downto 0 ) := (others=>'0');
 
     signal t_tx : std_logic;
+    signal t_full : std_logic;
 begin
-
     run_rs232 : rs232
         port map ( mclk => mclk,
                    reset => reset,
                    write_en => t_write_en,
                    data_out => t_write_data,
-                   tx => t_tx
+                   tx => t_tx,
+                   full => t_full
                  );
 
     clock : process is
@@ -50,16 +52,22 @@ begin
     end process clock;
 
     run : process is
+        variable i : integer;
     begin
         wait for clk_period;
         wait for clk_period/2;
         reset <= '0';
 
-        t_write_en <= '1';
-        t_write_data <= X"13";
-        wait for clk_period;
+        for i in 16#20# to 16#7e# loop
+            t_write_en <= '1';
+            t_write_data <= to_unsigned(i,8);
+            wait for clk_period;
 
-        t_write_en <= '0';
+            t_write_en <= '0';
+            wait for clk_period;
+
+            wait until t_full='0';
+        end loop;
 
         wait;
     end process run;
