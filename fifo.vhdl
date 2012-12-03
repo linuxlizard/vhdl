@@ -44,7 +44,7 @@ architecture fifo_arch of fifo is
                 q : out unsigned(data_width-1 downto 0) );
     end component d_ff;
 
-    signal wr_debug_count, rd_debug_count : integer;
+--    signal wr_debug_count, rd_debug_count : integer;
 
     type mem_array is array (0 to depth-1) of unsigned(7 downto 0 );
     signal RAM : mem_array;
@@ -64,19 +64,19 @@ begin
 
     read_ctl : process( read_clk, reset ) is
         variable rd_idx : unsigned( numbits-1 downto 0 ) := (others=>'0');
-        variable debug_read_counter : integer := 0;
+--        variable debug_read_counter : integer := 0;
     begin
         -- synchronizer gets our read idx
         rd_idx_1 <= rd_idx;
 
-        rd_debug_count <= debug_read_counter;
+--        rd_debug_count <= debug_read_counter;
 
         if( reset='1' ) then
             -- block outputs
             read_valid <= '0';
             -- internal variables
             rd_idx := (others=>'0');
-            debug_read_counter := 0;
+--            debug_read_counter := 0;
 
             rd_full <= '0';
             rd_empty <= '1';
@@ -88,7 +88,7 @@ begin
                 read_valid <= '1';
                 -- modulo math will cause rd_idx to rollover
                 rd_idx := rd_idx+1;
-                debug_read_counter := debug_read_counter + 1;
+--                debug_read_counter := debug_read_counter + 1;
             else
                 read_data <= X"ee";
                 read_valid <= '0';
@@ -131,18 +131,18 @@ begin
     --
     write_ctl : process( write_clk, reset ) is
         variable wr_idx : unsigned( numbits-1 downto 0 ) := (others=>'0');
-        variable debug_write_counter : integer := 0;
+--        variable debug_write_counter : integer := 0;
     begin
         -- synchronizer gets our write count
         wr_idx_1 <= wr_idx;
 
-        wr_debug_count <= debug_write_counter;
+--        wr_debug_count <= debug_write_counter;
 
         if( reset='1' ) then
             -- block output
             -- internal variables
             wr_idx := (others=>'0');
-            debug_write_counter := 0;
+--            debug_write_counter := 0;
             
             wr_full <= '0';
             wr_empty <= '1';
@@ -154,7 +154,7 @@ begin
                 -- modulo math will cause wr_idx to rollover
                 wr_idx := wr_idx+1;
 
-                debug_write_counter := debug_write_counter + 1;
+--                debug_write_counter := debug_write_counter + 1;
             end if;
 
             -- adjust full/empty signal

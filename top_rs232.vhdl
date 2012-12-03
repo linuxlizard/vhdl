@@ -70,13 +70,13 @@ architecture top_rs232_arch of top_rs232 is
     signal t_tx : std_logic;
     signal t_full : std_logic;
 
-    signal char_write_clk : std_logic;
+    signal char_to_write : unsigned(7 downto 0);
+    signal char_counter_next : std_logic := '0';
 
     type char_write_state is 
         ( STATE_INIT, STATE_WRITE_CHAR, STATE_WAIT_1, STATE_WAIT_NOT_FULL );
     signal curr_state, next_state: char_write_state;
 
-    signal debug_byte_to_send : unsigned(7 downto 0);
 
     signal t_baud_clk : std_logic;
 begin
@@ -111,13 +111,13 @@ begin
                     an => an,
                     dp => dp );
 
-    char_write : clk_divider
-        -- divide 50Mhz down to 1 char/sec
-        generic map(clkmax => 12500000) 
---        generic map(clkmax => 2 ) 
-        port map( clk_in => mclk,
-                reset => reset,
-                clk_out => char_write_clk);
+--    char_write : clk_divider
+--        -- divide 50Mhz down to 1 char/sec
+--        generic map(clkmax => 12500000) 
+----        generic map(clkmax => 2 ) 
+--        port map( clk_in => mclk,
+--                reset => reset,
+--                clk_out => char_write_clk);
 
     run_rs232 : rs232
         port map ( mclk => mclk,
@@ -138,54 +138,48 @@ begin
         end if;
     end process char_write_sm_run;
 
-    char_write_sm : process(curr_state,t_full) is
-        variable i : integer;
-        variable char_to_write : unsigned(7 downto 0);
-        variable next_char_to_write : unsigned(7 downto 0);
-
+    char_counter : process(reset,mclk) is
+        variable counter_register_data : unsigned(7 downto 0);
     begin
+        if( reset='1' ) then
+            char_to_write <= X"20";
+            counter_register_data := X"20";
+        elsif( falling_edge(mclk) ) then
+            if( char_counter_next='1' ) then 
+                if( counter_register_data = X"7e" ) then
+                    counter_register_data := X"20";
+                else 
+                    counter_register_data := counter_register_data+1;
+                end if;
+            end if;
+            char_to_write <= counter_register_data;
+        end if;
+    end process char_counter;
+
+    char_write_sm : process(curr_state,t_full) is
+    begin
+        t_write_data <= char_to_write;
+        char_counter_next <= '0';
+        t_write_en <= '0';
+
         case curr_state is 
             when STATE_INIT =>
                 next_state <= STATE_WRITE_CHAR;
-                t_write_data <= X"ee";
-                t_write_en <= '0';
-
-                char_to_write := X"20";
-                next_char_to_write := X"20";
 
             when STATE_WRITE_CHAR =>
-                t_write_data <= X"44";
---                t_write_data <= char_to_write;
                 t_write_en <= '1';
-                next_state <= STATE_WAIT_1;
-
---                if char_to_write = X"7e" then
---                    next_char_to_write := X"20";
---                else
---                    next_char_to_write := char_to_write + X"01";
---                end if;
-
-            when STATE_WAIT_1 =>
                 next_state <= STATE_WAIT_NOT_FULL;
-                t_write_data <= X"44";
---                t_write_data <= char_to_write;
-                t_write_en <= '1';
+                char_counter_next <= '1';
 
             when STATE_WAIT_NOT_FULL =>
-                t_write_en <= '0';
-                t_write_data <= X"ee";
-
                 if( t_full='0' ) then
---                    next_state <= STATE_WRITE_CHAR;
---                    char_to_write := next_char_to_write;
+                    next_state <= STATE_WRITE_CHAR;
                 else
                     next_state <= STATE_WAIT_NOT_FULL;
                 end if;
 
             when others =>
                 next_state <= STATE_INIT;
-                t_write_en <= '0';
-                t_write_data <= X"ee";
 
         end case;
 

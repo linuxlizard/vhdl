@@ -26,6 +26,13 @@ entity rs232 is
 end entity rs232;
 
 architecture rs232_arch of rs232 is
+    constant baud_clk_divider : integer := 
+    434
+    -- pragma synthesis off
+    - 434 + 4
+    -- pragma synthesis on
+    ;
+
     component clk_divider is
         generic (clkmax : integer);
         port ( reset : in std_logic;
@@ -33,8 +40,27 @@ architecture rs232_arch of rs232 is
                clk_out : out std_logic );
     end component clk_divider;
 
+    component fifo is
+        generic ( depth : integer ; 
+                  numbits : integer );
+        port( write_clk : in std_logic;
+                read_clk : in std_logic;
+                reset : in std_logic;
+                push : in std_logic;
+                write_data : in unsigned ( 7 downto 0 );
+                pop : in std_logic;
+
+                -- outputs
+                read_data : out unsigned ( 7 downto 0 );
+                read_valid : out std_logic;
+                full : out std_logic;
+                empty : out std_logic );
+    end component fifo;
+
     type rs232_state is 
         ( STATE_INIT, 
+          STATE_FIFO_POP_START,
+          STATE_FIFO_POP_FINISH,
           STATE_START_BIT, 
           STATE_DATA_BITS_7, 
           STATE_DATA_BITS_6, 
@@ -52,15 +78,29 @@ architecture rs232_arch of rs232 is
     signal baud_clk : std_logic;
 
     signal byte_to_send : unsigned(7 downto 0);
-    signal byte_to_send_hold : unsigned(7 downto 0);
+    signal byte_register_data : unsigned(7 downto 0);
 
-    signal next_full : std_logic := '0';
-    signal new_next_full : std_logic := '0';
+    signal rs232_full : std_logic;
+    signal rs232_read : std_logic := '0';
 
-    signal start_write : std_logic := '0';
-    signal write_finish : std_logic := '0';
+    signal fifo_byte_out : unsigned(7 downto 0);
+    signal fifo_read_valid : std_logic;
+    signal fifo_full : std_logic;
+    signal fifo_empty : std_logic;
+
+--    signal byte_to_send_hold : unsigned(7 downto 0);
+
+--    signal next_full : std_logic := '0';
+--    signal new_next_full : std_logic := '0';
+
+--    signal start_write : std_logic := '0';
+--    signal write_finish : std_logic := '0';
+
 begin
-    full <= new_next_full;
+
+    rs232_full <= fifo_full;
+
+    full <= rs232_full;
 
     debug_baud_clk <= baud_clk;
 
@@ -68,10 +108,30 @@ begin
         -- for simulation
 --        generic map(clkmax => 4)
         -- divide 50Mhz down to 115200 bits/sec
-        generic map(clkmax => 434)
+        generic map(clkmax => baud_clk_divider )
+--        generic map(clkmax => 434)
         port map( clk_in => mclk,
                 reset => reset,
                 clk_out => baud_clk);
+
+    run_fifo : fifo
+        generic map( depth=>32,
+                     numbits =>5)
+        port map ( write_clk=>mclk,
+                    read_clk => baud_clk,
+
+                    reset => reset,
+                    push => write_en,
+                    write_data => data_out,
+
+                    pop => rs232_read,
+
+                    -- outputs
+                    read_data => fifo_byte_out,
+                    read_valid => fifo_read_valid,
+                    full => fifo_full,
+                    empty => fifo_empty);
+
 
     state_machine_run : process(reset,baud_clk) is
     begin
@@ -82,36 +142,39 @@ begin
         end if;
     end process state_machine_run;
 
-    full_flag : process( write_en, write_finish ) is
+    byte_register : process( reset, mclk ) is
     begin
-        if( write_en='1' ) then
-            start_write <= '1';
-            new_next_full <= '1';
+        if( reset='1' ) then
+            byte_to_send <= (others=>'0');
+            byte_register_data <= (others=>'0');
+        elsif( rising_edge(mclk) ) then
+            if( fifo_read_valid='1') then
+                byte_register_data <= fifo_byte_out;
+            end if;
+            byte_to_send <= byte_register_data;
         end if;
-        if( write_finish='1' ) then 
-            start_write <= '0';
-            new_next_full <= '0';
-        end if;
-            
-    end process full_flag;
+    end process;
 
-    bit_banging : process( curr_state, start_write ) is
-        -- pragma synthesis off
-        variable s : line;
-        -- pragma synthesis on
+    bit_banging : process( curr_state, fifo_full, fifo_empty ) is
     begin
-        byte_to_send <= X"45";
+        rs232_read <= '0';
+        tx <= '1';
 
         case curr_state is
             when STATE_INIT =>
                 tx <= '1';
-                next_full <= '0';
-                if start_write ='1' then
-                    next_full <= '1';
-                    next_state <= STATE_START_BIT;
-                    byte_to_send_hold <= data_out;
-                    write_finish <= '0';
+                if( fifo_empty='0' ) then
+                    next_state <= STATE_FIFO_POP_START;
+                else 
+                    next_state <= STATE_INIT;
                 end if;
+
+            when STATE_FIFO_POP_START =>
+                rs232_read <= '1';
+                next_state <= STATE_FIFO_POP_FINISH;
+
+            when STATE_FIFO_POP_FINISH =>
+                rs232_read <= '0';
                 next_state <= STATE_START_BIT;
 
             when STATE_START_BIT =>
@@ -153,12 +216,10 @@ begin
             when STATE_STOP_BIT =>
                 tx <= '1';
                 next_state <= STATE_WAIT;
-                write_finish <= '1';
 
             when STATE_WAIT =>
                 tx <= '1';
                 next_state <= STATE_INIT; 
-                write_finish <= '1';
 
             when others =>
 --                    assert 1=0 
@@ -166,7 +227,6 @@ begin
 --                        report integer'image(integer(curr_state));
                 tx <= '0';
                 next_state <= STATE_INIT;
-                next_full <= '1';
         end case;
 
     end process bit_banging;
