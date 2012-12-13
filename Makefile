@@ -1,9 +1,16 @@
 #all : test_memory8bit
 #all : clocksync test_fifo fifo_file
-all : test_rs232
+all : androids test_random
+#all : test_rs232
 
 %.o : %.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
+
+test_random : random.o test_random.o
+	ghdl -m --ieee=synopsys -fexplicit $@
+
+androids : androids.o register.o
+	ghdl -m --ieee=synopsys -fexplicit $@
 
 clocksync : clocksync.o d_ff.o
 	ghdl -m --ieee=synopsys -fexplicit $@
