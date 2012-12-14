@@ -19,13 +19,16 @@ entity rs232_rx is
             data_out : out unsigned(7 downto 0);
             empty: out std_logic;
 
-            debug_baud_clk : out std_logic
+            -- debug signals
+            debug_baud_clk : out std_logic;
+            debug_write_en : out std_logic
          );
 end entity rs232_rx;
 
 architecture rs232_rx_arch of rs232_rx is
+    -- 57600
     constant baud_clk_divider : integer := 
-    434
+    434*16
     -- pragma synthesis off
     - 434 + 4
     -- pragma synthesis on
@@ -59,7 +62,7 @@ architecture rs232_rx_arch of rs232_rx is
         ( STATE_INIT, 
 --          STATE_FIFO_POP_START,
 --          STATE_FIFO_POP_FINISH,
---          STATE_START_BIT, 
+          STATE_START_BIT, 
           STATE_DATA_BITS_7, 
           STATE_DATA_BITS_6, 
           STATE_DATA_BITS_5, 
@@ -78,7 +81,12 @@ architecture rs232_rx_arch of rs232_rx is
 
     signal recv_byte : unsigned(7 downto 0);
     signal byte_register_data : unsigned(7 downto 0);
-    signal byte_register_data_in : unsigned(7 downto 0);
+    signal byte_register_data_next : unsigned(7 downto 0);
+
+    signal counter : unsigned(3 downto 0);
+    signal counter_next : unsigned(3 downto 0);
+
+--    signal byte_register_data_in : unsigned(7 downto 0);
     signal byte_register_write_en : std_logic;
 
 --    signal rs232_full : std_logic;
@@ -91,6 +99,7 @@ architecture rs232_rx_arch of rs232_rx is
 
 begin
     debug_baud_clk <= baud_clk;
+    debug_write_en <= byte_register_write_en;
 
     empty <= '0';
 
@@ -125,86 +134,92 @@ begin
 --                    empty => fifo_empty);
 --
 
-    state_machine_run : process(reset,baud_clk) is
+    state_machine_run : process(reset,fast_clk) is
     begin
         if( reset='1') then
             curr_state <= STATE_INIT;
+            byte_register_data <= (others=>'0');
+            counter <= (others=>'0');
         elsif( rising_edge(baud_clk)) then
             curr_state <= next_state;
+            byte_register_data <= byte_register_data_next;
+            counter <= counter_next;
         end if;
     end process state_machine_run;
 
-    byte_register : process( reset, baud_clk ) is
-    begin
-        if( reset='1' ) then
-            recv_byte <= (others=>'0');
-            byte_register_data <= (others=>'0');
-        elsif( falling_edge(baud_clk) ) then
-            if( byte_register_write_en='1') then
-                byte_register_data <= byte_register_data_in;
-            end if;
-            recv_byte <= byte_register_data;
-        end if;
-    end process;
+--    byte_register : process( reset, baud_clk ) is
+--    begin
+--        if( reset='1' ) then
+--            recv_byte <= (others=>'0');
+--            byte_register_data <= (others=>'0');
+--        elsif( rising_edge(baud_clk) ) then
+--            if( byte_register_write_en='1') then
+--                byte_register_data <= rx & byte_register_data(7 downto 1);
+--            end if;
+--            recv_byte <= byte_register_data;
+--        end if;
+--    end process;
 
-    bit_banging : process( curr_state, rx ) is
+    bit_banging : process( curr_state, byte_register_data, counter, fast_clk, rx ) is
     begin
         byte_register_write_en <= '0';
-        byte_register_data_in <= (others=>'0');
+--        byte_register_data_in <= (others=>'0');
 --        data_out <= X"aa";
+
+        byte_register_data_next <= byte_register_data;
 
         case curr_state is
             when STATE_INIT =>
                 if( rx='0' ) then
                     -- start bit
-                    next_state <= STATE_DATA_BITS_0;
+                    next_state <= STATE_START_BIT;
 --                    data_out <= X"aa";
                 else 
                     next_state <= STATE_INIT;
 --                    data_out <= X"11";
                 end if;
 
---            when STATE_START_BIT =>
---                next_state <= STATE_DATA_BITS_0;
+            when STATE_START_BIT =>
+                next_state <= STATE_DATA_BITS_0;
 
             when STATE_DATA_BITS_0 =>
                 byte_register_write_en <= '1';
-                byte_register_data_in <= recv_byte(6 downto 0) & rx;
+--                byte_register_data_in <= recv_byte(6 downto 0) & rx;
                 next_state <= STATE_DATA_BITS_1;
 
             when STATE_DATA_BITS_1 =>
                 byte_register_write_en <= '1';
-                byte_register_data_in <= recv_byte(6 downto 0) & rx;
+--                byte_register_data_in <= recv_byte(6 downto 0) & rx;
                 next_state <= STATE_DATA_BITS_2;
 
             when STATE_DATA_BITS_2 =>
                 byte_register_write_en <= '1';
-                byte_register_data_in <= recv_byte(6 downto 0) & rx;
+--                byte_register_data_in <= recv_byte(6 downto 0) & rx;
                 next_state <= STATE_DATA_BITS_3;
 
             when STATE_DATA_BITS_3 =>
                 byte_register_write_en <= '1';
-                byte_register_data_in <= recv_byte(6 downto 0) & rx;
+--                byte_register_data_in <= recv_byte(6 downto 0) & rx;
                 next_state <= STATE_DATA_BITS_4;
 
             when STATE_DATA_BITS_4 =>
                 byte_register_write_en <= '1';
-                byte_register_data_in <= recv_byte(6 downto 0) & rx;
+--                byte_register_data_in <= recv_byte(6 downto 0) & rx;
                 next_state <= STATE_DATA_BITS_5;
 
             when STATE_DATA_BITS_5 =>
                 byte_register_write_en <= '1';
-                byte_register_data_in <= recv_byte(6 downto 0) & rx;
+--                byte_register_data_in <= recv_byte(6 downto 0) & rx;
                 next_state <= STATE_DATA_BITS_6;
 
             when STATE_DATA_BITS_6 =>
                 byte_register_write_en <= '1';
-                byte_register_data_in <= recv_byte(6 downto 0) & rx;
+--                byte_register_data_in <= recv_byte(6 downto 0) & rx;
                 next_state <= STATE_DATA_BITS_7;
 
             when STATE_DATA_BITS_7 =>
                 byte_register_write_en <= '1';
-                byte_register_data_in <= recv_byte(6 downto 0) & rx;
+--                byte_register_data_in <= recv_byte(6 downto 0) & rx;
                 next_state <= STATE_STOP_BIT;
 
             when STATE_STOP_BIT =>
@@ -218,6 +233,7 @@ begin
 --                        report integer'image(integer(curr_state));
                 next_state <= STATE_INIT;
         end case;
+
 
     end process bit_banging;
 
