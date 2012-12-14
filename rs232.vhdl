@@ -29,7 +29,7 @@ architecture rs232_arch of rs232 is
     constant baud_clk_divider : integer := 
     434
     -- pragma synthesis off
-    - 434 + 4
+    - 434 + 4*16
     -- pragma synthesis on
     ;
 
@@ -108,7 +108,7 @@ begin
         -- for simulation
 --        generic map(clkmax => 4)
         -- divide 50Mhz down to 115200 bits/sec
-        generic map(clkmax => baud_clk_divider )
+        generic map(clkmax => baud_clk_divider-1 )
 --        generic map(clkmax => 434)
         port map( clk_in => mclk,
                 reset => reset,

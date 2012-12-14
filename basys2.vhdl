@@ -12,14 +12,15 @@ entity basys2 is
 end entity basys2;
 
 architecture basys2_arch of basys2 is 
+    -- pio_tx is driven by the top_rs232
+    constant pio_tx : integer := 73;
+    -- pio_rx is driven by this testbench code
+    constant pio_rx : integer := 74;
+
     constant clk_period : time := 10 ns;
 
-    constant baud_clk_divider : integer := 
-    434
-    -- pragma synthesis off
-    - 434 + 4
-    -- pragma synthesis on
-    ;
+    -- drive simulation at 16x the simulated Rx sampling clock
+    constant baud_clk_divider : integer := 4*16;
 
     -- use the same names as the actual hardware
     signal mclk :  std_logic;
@@ -77,7 +78,7 @@ begin
                   
     -- generate a 57600 baud clock
     baud_clock : clk_divider
-        generic map(clkmax => baud_clk_divider )
+        generic map(clkmax => baud_clk_divider-1 )
         port map( clk_in => mclk,
                 reset => sw(0),
                 clk_out => top_baud_clk);
@@ -106,17 +107,19 @@ begin
         variable i : integer;
         variable debug_value : std_logic_vector(7 downto 0);
     begin
-        PIO(74) <= '1';
+        -- allow top_rs232 to drive this line
+        PIO(pio_tx) <= 'Z';
+
+        -- Drive this line pretending to be the PC sending data
+        PIO(pio_rx) <= '1';
         debug_rxd <= '1';
 
         -- wait for reset to drop
         wait until sw="00000000";
 
-        PIO(74) <= 'Z';
-
         -- start bit
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '1';
+        PIO(pio_rx) <= '1';
         debug_rxd <= '1';
 
         -- data bits
@@ -131,45 +134,45 @@ begin
         wait until rising_edge(top_baud_clk);
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '0';
+        PIO(pio_rx) <= '0';
         debug_rxd <= '0';
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '1';
+        PIO(pio_rx) <= '1';
         debug_rxd <= '1';
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '0';
+        PIO(pio_rx) <= '0';
         debug_rxd <= '0';
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '1';
+        PIO(pio_rx) <= '1';
         debug_rxd <= '1';
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '0';
+        PIO(pio_rx) <= '0';
         debug_rxd <= '0';
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '1';
+        PIO(pio_rx) <= '1';
         debug_rxd <= '1';
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '0';
+        PIO(pio_rx) <= '0';
         debug_rxd <= '0';
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '1';
+        PIO(pio_rx) <= '1';
         debug_rxd <= '1';
 
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '0';
+        PIO(pio_rx) <= '0';
         debug_rxd <= '0';
 
 
         -- stop bit
         wait until rising_edge(top_baud_clk);
-        PIO(74) <= '1';
+        PIO(pio_rx) <= '1';
         debug_rxd <= '1';
 
 

@@ -25,11 +25,6 @@ begin
         elsif rising_edge(clk_in) then
             counter <= counter + 1;
             if counter=clkmax then
---                if curr_clk='1' then
---                    curr_clk <= '0';
---                else 
---                    curr_clk <= '1';
---                end if;
                 curr_clk <= not curr_clk;
                 counter <= 0;
             end if;

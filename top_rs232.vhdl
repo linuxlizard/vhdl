@@ -100,36 +100,15 @@ begin
     -- Reset Button
     reset <= sw(0);
 
+    -- Led set to current recieved byte
     led <= std_logic_vector(t_read_data);
     -- attach the receiver to the bottom LED
 --    led <= sw(7 downto 1) & t_rx;
 --    led <= sw(7 downto 1) & '0';
 
-    PIO(72) <= 'Z';
-
-    -- transmit from my code to the PC
---    PIO(73) <= 'Z'; 
-    PIO(73) <= t_tx; 
-
-    -- receive from the PC to my code
---    PIO(74) <= 'Z'; 
-    t_rx <= PIO(74); 
-    PIO(74) <= 'Z';
-
-    PIO(75) <= 'Z';
-    
---    PIO(83 downto 80) <= (others=>'Z');
-
-    -- Send serial transmit byte out PIO for debugging
-    PIO(83 downto 76) <= std_logic_vector(t_read_data);
-
-    -- debug signals
---    PIO(84) <= 'Z';
-    PIO(84) <= mclk;
-    PIO(85) <= rx_baud_clk;
-    PIO(86) <= t_full;
-    PIO(87) <= rx_debug_write_en;
-
+    --
+    --  7 segment display
+    --
     run_hex_to_7seg : hex_to_7seg 
         port map ( rst => reset,
                     mclk => mclk,
@@ -139,14 +118,9 @@ begin
                     an => an,
                     dp => dp );
 
---    char_write : clk_divider
---        -- divide 50Mhz down to 1 char/sec
---        generic map(clkmax => 12500000) 
-----        generic map(clkmax => 2 ) 
---        port map( clk_in => mclk,
---                reset => reset,
---                clk_out => char_write_clk);
-
+    --
+    --  Serial Tx
+    --
     run_rs232 : rs232
         port map ( mclk => mclk,
                    reset => reset,
@@ -158,6 +132,10 @@ begin
                    full => t_full,
                    debug_baud_clk => tx_baud_clk
                  );
+
+    -- 
+    --  Serial Rx
+    --
     run_rs232_rx : rs232_rx
         port map ( mclk=>mclk,
                     reset=>reset,
@@ -170,6 +148,9 @@ begin
                     debug_write_en => rx_debug_write_en
                  );
 
+    -- 
+    -- state machine to drive characters into the Tx FIFO
+    -- 
     char_write_sm_run : process(reset,mclk) is
     begin
         if( reset='1') then
@@ -179,6 +160,10 @@ begin
         end if;
     end process char_write_sm_run;
 
+    --
+    --  State machine to drive rotating character pattern output. Writes
+    --  the characters ' ' (space, 0x20) to '~' (tilde, 0x7e) forever.
+    -- 
     char_counter : process(reset,mclk) is
         variable counter_register_data : unsigned(7 downto 0);
     begin
@@ -197,6 +182,9 @@ begin
         end if;
     end process char_counter;
 
+    --
+    --  State machine to driver chacters into the Tx FIFO
+    --
     char_write_sm : process(curr_state,t_full) is
     begin
         t_write_data <= char_to_write;
@@ -224,19 +212,40 @@ begin
 
         end case;
 
---        for i in 16#20# to 16#7e# loop
---            t_write_en <= '1';
---            t_write_data <= to_unsigned(i,8);
-----            wait for clk_period;
---
---            t_write_en <= '0';
-----            wait for clk_period;
---
-----            wait until t_full='0';
---        end loop;
-
---        wait;
     end process char_write_sm;
+
+    --
+    -- PIO
+    --
+    --  DTE/DCE Signals
+    --
+    --  Signals for logic analyzer
+    --
+
+    -- RTX? CTX?  72/75 are RTX/CTX. Not using right now.
+    PIO(72) <= 'Z';
+    PIO(75) <= 'Z';
+
+    -- transmit from my code to the PC. My code owns this line.
+--    PIO(73) <= 'Z'; 
+    PIO(73) <= t_tx; 
+
+    -- receive from the PC to my code. The PC owns this line.
+--    PIO(74) <= 'Z'; 
+    t_rx <= PIO(74); 
+    PIO(74) <= 'Z';
+    
+--    PIO(83 downto 80) <= (others=>'Z');
+
+    -- Send serial transmit byte out PIO for debugging
+    PIO(83 downto 76) <= std_logic_vector(t_read_data);
+
+    -- debug signals
+--    PIO(84) <= 'Z';
+    PIO(84) <= mclk;
+    PIO(85) <= rx_baud_clk;
+    PIO(86) <= t_full;
+    PIO(87) <= rx_debug_write_en;
 
 end architecture top_rs232_arch;
 
