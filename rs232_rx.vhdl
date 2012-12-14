@@ -67,6 +67,8 @@ architecture rs232_rx_arch of rs232_rx is
 
     signal curr_state, next_state: rs232_state;
 
+    signal debug_num : integer;
+
     signal fast_clk : std_logic;
 
     signal data: unsigned(7 downto 0);
@@ -126,22 +128,27 @@ begin
             curr_state <= STATE_INIT;
             data <= (others=>'0');
             counter <= (others=>'0');
+            data_bits_counter <= (others=>'0');
         elsif( rising_edge(fast_clk)) then
             curr_state <= next_state;
             data <= next_data;
             counter <= next_counter;
+            data_bits_counter <= next_data_bits_counter;
         end if;
     end process state_machine_run;
 
     bit_banging : process( curr_state, data, counter, fast_clk, rx ) is
+        variable f : boolean := false;
     begin
         next_state <= curr_state;
         next_data <= data;
         next_counter <= counter;
         next_data_bits_counter <= data_bits_counter;
+        debug_num <= 0;
 
         case curr_state is
             when STATE_INIT =>
+                debug_num <= 1;
                 if( rx='0' ) then
                     -- start bit
                     next_state <= STATE_START_BIT;
@@ -150,6 +157,7 @@ begin
                 end if;
 
             when STATE_START_BIT =>
+                debug_num <= 2;
                 if counter = to_unsigned(15,5) then
                     next_state <= STATE_DATA_BITS;
                     next_counter <= (others=>'0');
@@ -160,11 +168,20 @@ begin
                 end if;
 
             when STATE_DATA_BITS =>
-                if counter=15 then
-                    next_data <= data(7 downto 1) & rx;
-                    if data_bits_counter=7 then
+                debug_num <= 3;
+                -- sample in the middle over our period
+                if counter=to_unsigned(7,5) then
+                    -- receive LSb to MSb
+                    next_data <= rx & data(7 downto 1);
+                    -- receive MSb to LSb
+                    --next_data <= data(6 downto 0) & rx;
+                end if;
+                if counter=to_unsigned(15,5) then
+                    -- if we've counted our 8 bits, move to the next state
+                    if data_bits_counter=to_unsigned(7,5) then
                         next_state <= STATE_STOP_BIT;
                         next_counter <= (others=>'0');
+                        next_data_bits_counter <= (others=>'0');
                     else 
                         next_state <= STATE_DATA_BITS;
                         next_counter <= (others=>'0');
@@ -176,7 +193,14 @@ begin
                 end if;
 
             when STATE_STOP_BIT =>
-                next_state <= STATE_INIT;
+                debug_num <= 4;
+                if counter = to_unsigned(15,5) then
+                    next_state <= STATE_INIT;
+                    next_counter <= (others=>'0');
+                else 
+                    next_state <= STATE_STOP_BIT;
+                    next_counter <= counter + 1;
+                end if;
 
             when others =>
                 next_state <= STATE_INIT;
