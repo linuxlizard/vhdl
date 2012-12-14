@@ -1,10 +1,16 @@
 #all : test_memory8bit
 #all : clocksync test_fifo fifo_file
-all : androids test_random
+all : basys2
+#all : androids test_random
 #all : test_rs232
 
 %.o : %.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
+
+basys2 : digits_to_7seg.o basys2.o rs232.o rs232_rx.o top_rs232.o\
+        hex_to_7seg.o digits_to_7seg.o divider.o ssegmuxor.o \
+        fifo.o sevenseg.o d_ff.o
+	ghdl -m --ieee=synopsys -fexplicit $@
 
 test_random : random.o test_random.o
 	ghdl -m --ieee=synopsys -fexplicit $@
@@ -54,15 +60,6 @@ edge_to_pulse.o : edge_to_pulse.vhdl
 test_vec : test_vec.o 
 	ghdl -m --ieee=synopsys -fexplicit $@
 test_vec.o : test_vec.vhdl
-	ghdl -a --ieee=synopsys -fexplicit $<
-
-basys2 : subway_tickets.o digits_to_7seg.o basys2.o ticket_counter.o\
-        ticket_dispense.o edge_to_pulse.o coin_counter.o ticket_display.o\
-        money_to_7seg.o hex_to_7seg.o digits_to_7seg.o
-	ghdl -m --ieee=synopsys -fexplicit $@
-basys2.o : basys2.vhdl
-	ghdl -a --ieee=synopsys -fexplicit $<
-subway_tickets.o : subway_tickets.vhdl
 	ghdl -a --ieee=synopsys -fexplicit $<
 
 #test_basys2_mux : basys2_mux.o test_basys2_mux.o
