@@ -31,7 +31,7 @@ architecture basys2_arch of basys2 is
     signal an : std_logic_vector( 3 downto 0 ) := (others=>'0');
     signal dp : std_logic;
     signal PIO : std_logic_vector( 87 downto 72 );
-    signal top_baud_clk : std_logic;
+    signal rx_baud_clk : std_logic;
 
     signal debug_rxd : std_logic;
 
@@ -56,6 +56,7 @@ architecture basys2_arch of basys2 is
             ); 
     end component top_rs232;
 
+    signal byte_to_send : std_logic_vector(7 downto 0);
 begin
     -- This is the main clock
     clock : process is
@@ -76,12 +77,13 @@ begin
                    dp => dp
                  );
                   
-    -- generate a 57600 baud clock
+    -- generate a 57600 baud clock for the transmitter (we transmit to the
+    -- top_rs232 and top_rs232 transmits to us)
     baud_clock : clk_divider
         generic map(clkmax => baud_clk_divider-1 )
         port map( clk_in => mclk,
                 reset => sw(0),
-                clk_out => top_baud_clk);
+                clk_out => rx_baud_clk);
 
     stimulus : process is
         variable str : line;
@@ -106,6 +108,7 @@ begin
     char_input : process is 
         variable i : integer;
         variable debug_value : std_logic_vector(7 downto 0);
+        variable s : line;
     begin
         -- allow top_rs232 to drive this line
         PIO(pio_tx) <= 'Z';
@@ -117,61 +120,76 @@ begin
         -- wait for reset to drop
         wait until sw="00000000";
 
+        wait until falling_edge(rx_baud_clk);
+        wait until falling_edge(rx_baud_clk);
+        wait until falling_edge(rx_baud_clk);
+
+        byte_to_send <= x"31";
+
         -- start bit
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '1';
-        debug_rxd <= '1';
+        PIO(pio_rx) <= '0';
+        debug_rxd <= '0';
+        wait until falling_edge(rx_baud_clk);
 
         -- data bits
         for i in 0 to 7 loop
             debug_value := std_logic_vector(to_unsigned(i,8));
-            debug_rxd <= debug_value(0);
+            -- transmit LSb to MSb
+            debug_rxd <= byte_to_send(0);
+            PIO(pio_rx) <= byte_to_send(0);
+            byte_to_send <= '0' & byte_to_send(7 downto 1);
+
+            write(s,string'("i=") & integer'image(i));
+            write(s,string'(" bit="));
+            write(s,byte_to_send(0));
+            writeline(output,s);
+            wait until falling_edge(rx_baud_clk);
         end loop;
 
         -- wait 3 ticks 
-        wait until rising_edge(top_baud_clk);
-        wait until rising_edge(top_baud_clk);
-        wait until rising_edge(top_baud_clk);
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '0';
-        debug_rxd <= '0';
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '1';
-        debug_rxd <= '1';
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '0';
-        debug_rxd <= '0';
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '1';
-        debug_rxd <= '1';
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '0';
-        debug_rxd <= '0';
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '1';
-        debug_rxd <= '1';
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '0';
-        debug_rxd <= '0';
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '1';
-        debug_rxd <= '1';
-
-        wait until rising_edge(top_baud_clk);
-        PIO(pio_rx) <= '0';
-        debug_rxd <= '0';
-
+--        wait until rising_edge(rx_baud_clk);
+--        wait until rising_edge(rx_baud_clk);
+--        wait until rising_edge(rx_baud_clk);
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '0';
+--        debug_rxd <= '0';
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '1';
+--        debug_rxd <= '1';
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '0';
+--        debug_rxd <= '0';
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '1';
+--        debug_rxd <= '1';
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '0';
+--        debug_rxd <= '0';
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '1';
+--        debug_rxd <= '1';
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '0';
+--        debug_rxd <= '0';
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '1';
+--        debug_rxd <= '1';
+--
+--        wait until rising_edge(rx_baud_clk);
+--        PIO(pio_rx) <= '0';
+--        debug_rxd <= '0';
+--
 
         -- stop bit
-        wait until rising_edge(top_baud_clk);
+        wait until rising_edge(rx_baud_clk);
         PIO(pio_rx) <= '1';
         debug_rxd <= '1';
 
