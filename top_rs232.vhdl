@@ -90,7 +90,7 @@ architecture top_rs232_arch of top_rs232 is
     signal char_counter_next : std_logic := '0';
 
     type char_write_state is 
-        ( STATE_INIT, STATE_WRITE_CHAR, STATE_WAIT_1, STATE_WAIT_NOT_FULL );
+        ( STATE_INIT, STATE_WRITE_CHAR, STATE_WAIT_NOT_FULL );
     signal curr_state, next_state: char_write_state;
 
     signal tx_baud_clk : std_logic;
@@ -242,7 +242,7 @@ begin
 
     -- debug signals
 --    PIO(84) <= 'Z';
-    PIO(84) <= mclk;
+    PIO(84) <= tx_baud_clk;
     PIO(85) <= rx_baud_clk;
     PIO(86) <= t_full;
     PIO(87) <= rx_debug_write_en;

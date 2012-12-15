@@ -28,9 +28,9 @@ end entity rs232_rx;
 architecture rs232_rx_arch of rs232_rx is
     -- 57600
     constant baud_clk_divider : integer := 
-    434*16
+    434/16
     -- pragma synthesis off
-    - 434*16 + 4
+    - 434/16 + 4
     -- pragma synthesis on
     ;
 

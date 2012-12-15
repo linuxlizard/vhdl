@@ -29,7 +29,7 @@ architecture rs232_arch of rs232 is
     constant baud_clk_divider : integer := 
     434
     -- pragma synthesis off
-    - 434 + 4*16
+    - 434 + 4
     -- pragma synthesis on
     ;
 
