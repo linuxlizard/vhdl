@@ -96,10 +96,14 @@ begin
         sw <= "00000001";
         wait for clk_period;
 
-        -- clear reset
+        -- clear reset 
         sw <= "00000000";
         wait for clk_period;
         wait for clk_period/2;
+
+        -- davep 15-dec-2012 ; add "string output" test on sw(2)
+        sw <= "00000100";
+        wait for clk_period;
 
        wait;
     end process stimulus;

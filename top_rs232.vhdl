@@ -92,6 +92,20 @@ architecture top_rs232_arch of top_rs232 is
                clk_out : out std_logic );
     end component clk_divider;
 
+    component write_string is
+        port ( clk : in std_logic;
+                reset : in std_logic;
+
+                write_en : in std_logic;
+                str_in : in string(15 downto 1);
+                tx_full : in std_logic;
+
+                tx_out_char : out unsigned(7 downto 0);
+                tx_write_en : out std_logic;
+                write_complete : out std_logic
+             );
+    end component write_string;
+
     signal reset : std_logic := '1';
 
     -- test pattern generator
@@ -128,19 +142,35 @@ architecture top_rs232_arch of top_rs232 is
     -- local echo
     type echo_state is
         ( ECHO_STATE_INIT, ECHO_STATE_START_POP, ECHO_STATE_DONE_POP,
-          ECHO_STATE_START_TX, ECHO_STATE_DONE_TX );
+          ECHO_STATE_START_TX, ECHO_STATE_DONE_TX,
+          -- drive a string out the Tx on each keypress 
+          -- (for testing string writer)
+          ECHO_STATE_TX_STRING_START,
+          ECHO_STATE_TX_STRING_DONE,
+          ECHO_STATE_TX_STRING_WAIT
+          );
     signal echo_curr_state, echo_next_state : echo_state;
     signal echo_tx_write_en, echo_next_tx_write_en : std_logic := '0';
     signal echo_data, echo_next_data : unsigned (7 downto 0 ) := (others=>'0');
     signal echo_rx_pop, echo_next_rx_pop : std_logic := '0';
+    signal echo_en : std_logic := '1';
+
+    -- string output
+    signal str_write_en : std_logic := '0';
+    signal str_string : string(15 downto 1) := (others=>nul);
+    signal str_tx_out_char : unsigned(7 downto 0);
+    signal str_tx_write_en : std_logic;
+    signal str_write_complete : std_logic;
 
 begin
     -- Reset Button
     reset <= sw(0);
 
     -- drive test pattern when sw(1) is high
-    -- otherwise do local echo
+    -- do local echo when sw(2) is high
+    -- otherwise, drive string out Tx on keypress
     test_pattern_en <= sw(1);
+--    echo_en <= sw(2);
 
     -- Led set to current recieved byte
     led <= std_logic_vector(t_read_data);
@@ -176,9 +206,24 @@ begin
                  );
 
     t_write_data <= tp_write_data when test_pattern_en='1' else
-                    echo_data;
+                    echo_data when echo_en='1' else
+                    str_tx_out_char;
     t_write_en <= tp_write_en when test_pattern_en='1' else
-                  echo_tx_write_en;
+                  echo_tx_write_en when echo_en='1' else
+                  str_tx_write_en;
+
+    -- pragma synthesis off
+    -- test/debug tool to watch character being transmitted
+    watch_tx : process(t_write_en,t_write_data) is
+        variable str : line;
+    begin
+        if t_write_en='1' then
+            write(str,string'("t_write_data="));
+            write(str, std_logic_vector(t_write_data) );
+            writeline(output,str);
+        end if;
+    end process watch_tx;
+    -- pragma synthesis on
 
     -- 
     --  Serial Rx
@@ -283,12 +328,21 @@ begin
     end process echo_sm_run;
 
     echo_sm :
-    process(echo_curr_state,rx_empty,tx_full,echo_rx_pop,echo_data,echo_tx_write_en,t_read_data) is
+    process(echo_curr_state,rx_empty,tx_full,echo_rx_pop,
+            echo_data,echo_tx_write_en,t_read_data,str_write_complete,
+            sw) is
     begin
         echo_next_state <= echo_curr_state;
         echo_next_rx_pop <= echo_rx_pop;
         echo_next_data <= echo_data;
         echo_next_tx_write_en <= echo_tx_write_en;
+
+        -- to test the string writer state machine, write a string to Tx on
+        -- each keypress
+        str_string <= (1=>nul,others=>nul);
+        str_write_en <= '0';
+
+        echo_en <= '1';
 
         case echo_curr_state is
             when ECHO_STATE_INIT =>
@@ -314,18 +368,87 @@ begin
                 if tx_full='0' then
                     -- write our received byte to the Tx UART
                     echo_next_tx_write_en <= '1';
+
                     echo_next_state <= ECHO_STATE_DONE_TX;
                 end if;
 
             when ECHO_STATE_DONE_TX =>
                 echo_next_tx_write_en <= '0';
-                echo_next_state <= ECHO_STATE_INIT;
+
+                -- if sw(2) is enabled, drive an extra string out the serial
+                -- port to validate our string writer
+                if sw(2)='1' then
+                    echo_next_state <= ECHO_STATE_TX_STRING_START;
+                    -- let the string writer drive Tx
+                    echo_en <= '0';
+                else 
+                    echo_next_state <= ECHO_STATE_INIT;
+                end if;
+
+            when ECHO_STATE_TX_STRING_START =>
+                -- transmit a hardcoded string to test our string writer
+                -- load the string writer with a string
+                str_string <= ('h','e','l','l','o',' ','w','o','r','l','d','!','@','#',nul);
+                str_write_en <= '1';
+                echo_next_state <= ECHO_STATE_TX_STRING_DONE;
+
+                -- let the string writer drive Tx
+                echo_en <= '0';
+
+            when ECHO_STATE_TX_STRING_DONE =>
+                str_write_en <= '0';
+                echo_next_state <= ECHO_STATE_TX_STRING_WAIT;
+
+                -- let the string writer drive Tx
+                echo_en <= '0';
+
+            when ECHO_STATE_TX_STRING_WAIT =>
+                -- wait for string writer to complete
+                if str_write_complete='1' then
+                    echo_next_state <= ECHO_STATE_INIT;
+                    -- echo will once again drive string writer
+                    echo_en <= '1';
+                else
+                    echo_next_state <= ECHO_STATE_TX_STRING_WAIT;
+                    -- let the string writer drive Tx
+                    echo_en <= '0';
+                end if;
                 
             when others =>
                 echo_next_state <= ECHO_STATE_INIT;
         end case;
     end process echo_sm;
 
+    --
+    -- Write a string on keystroke (test for string writing in synthesis)
+    --
+    write_string_subsm : write_string 
+        port map(clk=>mclk,
+                reset=>reset,
+                write_en=>str_write_en,
+                str_in=>str_string,
+                tx_full => tx_full,
+
+                -- outputs
+                tx_out_char => str_tx_out_char,
+                tx_write_en => str_tx_write_en,
+
+                -- pulses on completion of the write 
+                write_complete=>str_write_complete );
+
+--    write_string_on_key : process(reset,mclk,rx_empty) is
+--    begin
+--        if reset='0' then
+--            str_write_en <= '0';
+--        elsif rising_edge(mclk) then
+--            if rx_empty='0' then
+--                str_write_en <= '1';
+--                str_string <= ('h','e','l','l','o',' ','w','o','r','l','d','!','@','#',nul);
+--            else
+--                str_write_en <= '0';
+--            end if;
+--        end if;
+--    end process write_string_on_key;
 
     --
     -- PIO
