@@ -14,9 +14,10 @@ use ieee.numeric_std.all;
 entity rs232_rx is
     port ( mclk : in std_logic;
             reset : in std_logic;
+            read_en : in std_logic;
             rx : in std_logic;
 
-            data_out : out unsigned(7 downto 0);
+            data_in : out unsigned(7 downto 0);
             empty: out std_logic;
 
             -- debug signals
@@ -83,18 +84,20 @@ architecture rs232_rx_arch of rs232_rx is
 --    signal rs232_full : std_logic;
 --    signal rs232_read : std_logic := '0';
 
---    signal fifo_byte_out : unsigned(7 downto 0);
---    signal fifo_read_valid : std_logic;
---    signal fifo_full : std_logic;
---    signal fifo_empty : std_logic;
+    signal fifo_byte_out : unsigned(7 downto 0);
+    signal next_fifo_write_en, fifo_write_en : std_logic;
+    signal fifo_read_valid : std_logic;
+    signal fifo_full : std_logic;
+    signal fifo_empty : std_logic;
+    signal fifo_pop : std_logic;
 
 begin
     debug_baud_clk <= fast_clk;
     debug_write_en <= '0';
 
-    empty <= '0';
+--    empty <= '0';
 
-    data_out <= data;
+--    data_in <= data;
 
     baud_clock : clk_divider
         -- divide 50Mhz down to 57600 bits/sec w/ 16x oversampling
@@ -103,24 +106,28 @@ begin
                 reset => reset,
                 clk_out => fast_clk);
 
---    run_fifo : fifo
---        generic map( depth=>32,
---                     numbits =>5)
---        port map ( write_clk=>mclk,
---                    read_clk => baud_clk,
---
---                    reset => reset,
---                    push => write_en,
---                    write_data => data_out,
---
---                    pop => rs232_read,
---
---                    -- outputs
---                    read_data => fifo_byte_out,
---                    read_valid => fifo_read_valid,
---                    full => fifo_full,
---                    empty => fifo_empty);
---
+    run_fifo : fifo
+        generic map( depth=>32,
+                     numbits =>5)
+        port map ( write_clk=>fast_clk,
+                    read_clk => mclk,
+                    reset => reset,
+
+                    push => fifo_write_en,
+                    write_data => data,
+
+                    pop => fifo_pop,
+
+                    -- outputs
+                    read_data => fifo_byte_out,
+                    read_valid => fifo_read_valid,
+                    full => fifo_full,
+                    empty => fifo_empty);
+
+    -- signals from The Outside World
+    empty <= fifo_empty;
+    fifo_pop <= read_en;
+    data_in <= fifo_byte_out;
 
     state_machine_run : process(reset,fast_clk) is
     begin
@@ -129,22 +136,27 @@ begin
             data <= (others=>'0');
             counter <= (others=>'0');
             data_bits_counter <= (others=>'0');
+            fifo_write_en <= '0';
         elsif( rising_edge(fast_clk)) then
             curr_state <= next_state;
             data <= next_data;
             counter <= next_counter;
             data_bits_counter <= next_data_bits_counter;
+            fifo_write_en <= next_fifo_write_en;
         end if;
     end process state_machine_run;
 
-    bit_banging : process( curr_state, data, counter, fast_clk, rx ) is
+    bit_banging : process( curr_state, data, counter, fast_clk, rx,
+                          data_bits_counter, fifo_write_en ) is
         variable f : boolean := false;
     begin
+        debug_num <= 0;
+
         next_state <= curr_state;
         next_data <= data;
         next_counter <= counter;
         next_data_bits_counter <= data_bits_counter;
-        debug_num <= 0;
+        next_fifo_write_en <= fifo_write_en;
 
         case curr_state is
             when STATE_INIT =>
@@ -176,12 +188,16 @@ begin
                     -- receive MSb to LSb
                     --next_data <= data(6 downto 0) & rx;
                 end if;
+
                 if counter=to_unsigned(15,5) then
                     -- if we've counted our 8 bits, move to the next state
                     if data_bits_counter=to_unsigned(7,5) then
                         next_state <= STATE_STOP_BIT;
                         next_counter <= (others=>'0');
                         next_data_bits_counter <= (others=>'0');
+
+                        -- write our captured byte into the FIFO
+                        next_fifo_write_en <= '1';
                     else 
                         next_state <= STATE_DATA_BITS;
                         next_counter <= (others=>'0');
@@ -194,6 +210,7 @@ begin
 
             when STATE_STOP_BIT =>
                 debug_num <= 4;
+                next_fifo_write_en <= '0';
                 if counter = to_unsigned(15,5) then
                     next_state <= STATE_INIT;
                     next_counter <= (others=>'0');

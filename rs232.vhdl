@@ -155,7 +155,7 @@ begin
         end if;
     end process;
 
-    bit_banging : process( curr_state, fifo_full, fifo_empty ) is
+    bit_banging : process( curr_state, fifo_full, fifo_empty, byte_to_send ) is
     begin
         rs232_read <= '0';
         tx <= '1';

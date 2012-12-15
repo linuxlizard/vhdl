@@ -34,6 +34,8 @@ architecture top_rs232_arch of top_rs232 is
                 -- outputs
                 tx : out std_logic;
                 full : out std_logic;
+
+                -- test/debug signals
                 debug_baud_clk : out std_logic
              );
     end component rs232;
@@ -41,11 +43,14 @@ architecture top_rs232_arch of top_rs232 is
     component rs232_rx is
         port ( mclk : in std_logic;
                 reset : in std_logic;
+                read_en : in std_logic;
                 rx : in std_logic;
 
                 -- outputs 
-                data_out : out unsigned(7 downto 0);
+                data_in : out unsigned(7 downto 0);
                 empty: out std_logic;
+
+                -- test/debug signals
                 debug_baud_clk : out std_logic;
                 debug_write_en : out std_logic
              );
@@ -69,6 +74,17 @@ architecture top_rs232_arch of top_rs232 is
             ); 
     end component hex_to_7seg;
 
+    component stub_hex_to_7seg is
+        port(  rst : in std_logic;
+                mclk : in std_logic;
+                word_in : in std_logic_vector(15 downto 0 );
+                display_mask_in : in std_logic_vector (3 downto 0 );
+                seg : out std_logic_vector(6 downto 0 );
+                an : out std_logic_vector(3 downto 0);
+                dp : out std_logic
+            ); 
+    end component stub_hex_to_7seg;
+
     component clk_divider is
         generic (clkmax : integer);
         port ( reset : in std_logic;
@@ -77,28 +93,54 @@ architecture top_rs232_arch of top_rs232 is
     end component clk_divider;
 
     signal reset : std_logic := '1';
+
+    -- test pattern generator
+    signal tp_write_en : std_logic := '0';
+    signal tp_write_data : unsigned (7 downto 0 ) := (others=>'0');
+    signal test_pattern_en : std_logic;
+    signal tp_test_character : unsigned(7 downto 0);
+    signal char_counter_next : std_logic := '0';
+    type tp_write_state is 
+        ( TP_STATE_INIT, TP_STATE_WRITE_CHAR, TP_STATE_WAIT_NOT_FULL );
+    signal tp_curr_state, tp_next_state: tp_write_state;
+
+
+    -- Tx/Rx connections
     signal t_write_en : std_logic := '0';
     signal t_write_data : unsigned (7 downto 0 ) := (others=>'0');
+
+    signal t_read_en : std_logic := '0';
     signal t_read_data : unsigned (7 downto 0 ) := (others=>'0');
 
     signal t_tx : std_logic;
-    signal t_full : std_logic;
-    signal t_empty: std_logic;
+    signal tx_full : std_logic;
+
+    signal rx_empty: std_logic;
     signal t_rx : std_logic;
-
-    signal char_to_write : unsigned(7 downto 0);
-    signal char_counter_next : std_logic := '0';
-
-    type char_write_state is 
-        ( STATE_INIT, STATE_WRITE_CHAR, STATE_WAIT_NOT_FULL );
-    signal curr_state, next_state: char_write_state;
 
     signal tx_baud_clk : std_logic;
     signal rx_baud_clk : std_logic;
     signal rx_debug_write_en : std_logic;
+
+    signal seven_seg_word : std_logic_vector(15 downto 0);
+    signal next_seven_seg_word : std_logic_vector(15 downto 0);
+
+    -- local echo
+    type echo_state is
+        ( ECHO_STATE_INIT, ECHO_STATE_START_POP, ECHO_STATE_DONE_POP,
+          ECHO_STATE_START_TX, ECHO_STATE_DONE_TX );
+    signal echo_curr_state, echo_next_state : echo_state;
+    signal echo_tx_write_en, echo_next_tx_write_en : std_logic := '0';
+    signal echo_data, echo_next_data : unsigned (7 downto 0 ) := (others=>'0');
+    signal echo_rx_pop, echo_next_rx_pop : std_logic := '0';
+
 begin
     -- Reset Button
     reset <= sw(0);
+
+    -- drive test pattern when sw(1) is high
+    -- otherwise do local echo
+    test_pattern_en <= sw(1);
 
     -- Led set to current recieved byte
     led <= std_logic_vector(t_read_data);
@@ -109,10 +151,10 @@ begin
     --
     --  7 segment display
     --
-    run_hex_to_7seg : hex_to_7seg 
+    run_hex_to_7seg : stub_hex_to_7seg 
         port map ( rst => reset,
                     mclk => mclk,
-                    word_in => X"abcd",
+                    word_in => seven_seg_word,
                     display_mask_in => "1111",
                     seg => seg,
                     an => an,
@@ -129,9 +171,14 @@ begin
                    tx => t_tx,
 
                    --outputs
-                   full => t_full,
+                   full => tx_full,
                    debug_baud_clk => tx_baud_clk
                  );
+
+    t_write_data <= tp_write_data when test_pattern_en='1' else
+                    echo_data;
+    t_write_en <= tp_write_en when test_pattern_en='1' else
+                  echo_tx_write_en;
 
     -- 
     --  Serial Rx
@@ -139,36 +186,28 @@ begin
     run_rs232_rx : rs232_rx
         port map ( mclk=>mclk,
                     reset=>reset,
+                    read_en => t_read_en,
                     rx=>t_rx,
 
                     -- outputs
-                    data_out => t_read_data,
-                    empty => t_empty,
+                    data_in => t_read_data,
+                    empty => rx_empty,
                     debug_baud_clk => rx_baud_clk, 
                     debug_write_en => rx_debug_write_en
                  );
 
-    -- 
-    -- state machine to drive characters into the Tx FIFO
-    -- 
-    char_write_sm_run : process(reset,mclk) is
-    begin
-        if( reset='1') then
-            curr_state <= STATE_INIT;
-        elsif( rising_edge(mclk)) then
-            curr_state <= next_state;
-        end if;
-    end process char_write_sm_run;
-
+    t_read_en <= '0' when test_pattern_en='1' else
+                 echo_rx_pop;
     --
     --  State machine to drive rotating character pattern output. Writes
     --  the characters ' ' (space, 0x20) to '~' (tilde, 0x7e) forever.
+    --  (output used by test pattern state machine)
     -- 
-    char_counter : process(reset,mclk) is
+    run_char_iterator : process(reset,mclk) is
         variable counter_register_data : unsigned(7 downto 0);
     begin
         if( reset='1' ) then
-            char_to_write <= X"20";
+            tp_test_character <= X"20";
             counter_register_data := X"20";
         elsif( falling_edge(mclk) ) then
             if( char_counter_next='1' ) then 
@@ -178,41 +217,115 @@ begin
                     counter_register_data := counter_register_data+1;
                 end if;
             end if;
-            char_to_write <= counter_register_data;
+            tp_test_character <= counter_register_data;
         end if;
-    end process char_counter;
+    end process run_char_iterator;
 
-    --
-    --  State machine to driver chacters into the Tx FIFO
-    --
-    char_write_sm : process(curr_state,t_full) is
+    -- 
+    -- state machine to drive characters into the Tx FIFO
+    -- 
+    tp_char_write_sm_run : process(reset,mclk) is
     begin
-        t_write_data <= char_to_write;
+        if( reset='1') then
+            tp_curr_state <= TP_STATE_INIT;
+        elsif( rising_edge(mclk)) then
+            tp_curr_state <= tp_next_state;
+        end if;
+    end process tp_char_write_sm_run;
+
+    --
+    --  State machine to drive test pattern characters when Tx fifo is not full
+    --
+    --  Note I'm using the tx_full signal directly from the Tx 
+    tp_char_write_sm : process(tp_curr_state,tx_full,tp_test_character) is
+    begin
+        tp_write_data <= tp_test_character;
         char_counter_next <= '0';
-        t_write_en <= '0';
+        tp_write_en <= '0';
 
-        case curr_state is 
-            when STATE_INIT =>
-                next_state <= STATE_WRITE_CHAR;
+        case tp_curr_state is 
+            when TP_STATE_INIT =>
+                tp_next_state <= TP_STATE_WRITE_CHAR;
 
-            when STATE_WRITE_CHAR =>
-                t_write_en <= '1';
-                next_state <= STATE_WAIT_NOT_FULL;
+            when TP_STATE_WRITE_CHAR =>
+                tp_write_en <= '1';
+                tp_next_state <= TP_STATE_WAIT_NOT_FULL;
                 char_counter_next <= '1';
 
-            when STATE_WAIT_NOT_FULL =>
-                if( t_full='0' ) then
-                    next_state <= STATE_WRITE_CHAR;
+            when TP_STATE_WAIT_NOT_FULL =>
+                if( tx_full='0' ) then
+                    tp_next_state <= TP_STATE_WRITE_CHAR;
                 else
-                    next_state <= STATE_WAIT_NOT_FULL;
+                    tp_next_state <= TP_STATE_WAIT_NOT_FULL;
                 end if;
 
             when others =>
-                next_state <= STATE_INIT;
-
+                tp_next_state <= TP_STATE_INIT;
         end case;
+    end process tp_char_write_sm;
 
-    end process char_write_sm;
+    -- 
+    -- state machine to drive local echo
+    -- 
+    echo_sm_run : process(reset,mclk) is
+    begin
+        if( reset='1') then
+            echo_curr_state <= ECHO_STATE_INIT;
+            echo_rx_pop <= '0';
+            echo_data <= (others=>'0');
+            echo_tx_write_en <= '0';
+        elsif( rising_edge(mclk)) then
+            echo_curr_state <= echo_next_state;
+            echo_rx_pop <= echo_next_rx_pop;
+            echo_data <= echo_next_data;
+            echo_tx_write_en <= echo_next_tx_write_en;
+        end if;
+    end process echo_sm_run;
+
+    echo_sm :
+    process(echo_curr_state,rx_empty,tx_full,echo_rx_pop,echo_data,echo_tx_write_en,t_read_data) is
+    begin
+        echo_next_state <= echo_curr_state;
+        echo_next_rx_pop <= echo_rx_pop;
+        echo_next_data <= echo_data;
+        echo_next_tx_write_en <= echo_tx_write_en;
+
+        case echo_curr_state is
+            when ECHO_STATE_INIT =>
+                -- if the Rx UART has data
+                if rx_empty='0' then
+                    -- we have characters we can transfer to the write 
+                    echo_next_state <= ECHO_STATE_START_POP;
+                    echo_next_rx_pop <= '1';
+                end if;
+
+            when ECHO_STATE_START_POP =>
+                echo_next_rx_pop <= '0';
+--                echo_next_data <= t_read_data;
+                echo_next_state <= ECHO_STATE_DONE_POP;
+
+            when ECHO_STATE_DONE_POP =>
+                -- we have popped a value from the Rx UART
+                echo_next_data <= t_read_data;
+                echo_next_state <= ECHO_STATE_START_TX;
+
+            when ECHO_STATE_START_TX =>
+                -- if the Tx UART has space
+                if tx_full='0' then
+                    -- write our received byte to the Tx UART
+                    echo_next_tx_write_en <= '1';
+                    echo_next_state <= ECHO_STATE_DONE_TX;
+                end if;
+
+            when ECHO_STATE_DONE_TX =>
+                echo_next_tx_write_en <= '0';
+                echo_next_state <= ECHO_STATE_INIT;
+                
+            when others =>
+                echo_next_state <= ECHO_STATE_INIT;
+        end case;
+    end process echo_sm;
+
 
     --
     -- PIO
@@ -244,7 +357,7 @@ begin
 --    PIO(84) <= 'Z';
     PIO(84) <= tx_baud_clk;
     PIO(85) <= rx_baud_clk;
-    PIO(86) <= t_full;
+    PIO(86) <= tx_full;
     PIO(87) <= rx_debug_write_en;
 
 end architecture top_rs232_arch;
