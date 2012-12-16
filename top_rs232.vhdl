@@ -16,7 +16,7 @@ entity top_rs232 is
              sw : in std_logic_vector(7 downto 0);
 
            PIO  : inout std_logic_vector (87 downto 72); 
-
+    
             led : out std_logic_vector( 7 downto 0 );
             seg : out std_logic_vector( 6 downto 0 );
              an : out std_logic_vector( 3 downto 0 );
@@ -38,25 +38,27 @@ architecture top_rs232_arch of top_rs232 is
         ( esc,'[','2','J',esc,'[','1',';','1','H',nul,others=>nul);
 
     -- vt100 sequences for cursor movement
+    -- davep 16-Dec-2012 ; adding cursor left onto every motion so the 
+    -- cursor is put back on the trail character ("#")
     constant vt100_cursor_up : string(15 downto 1) := 
-        ( esc,'[','A',nul,others=>nul);
+        ( esc,'[','D',esc,'[','A',nul,others=>nul);
     constant vt100_cursor_down : string(15 downto 1) := 
-        ( esc,'[','B',nul,others=>nul);
+        ( esc,'[','D',esc,'[','B',nul,others=>nul);
 
     constant vt100_cursor_right : string(15 downto 1) := 
-        ( esc,'[','C',nul,others=>nul);
+        ( esc,'[','D',esc,'[','C',nul,others=>nul);
     constant vt100_cursor_left : string(15 downto 1) := 
-        ( esc,'[','D',nul,others=>nul);
+        ( esc,'[','D',esc,'[','D',nul,others=>nul);
 
     constant vt100_cursor_upright: string(15 downto 1) := 
-        ( esc,'[','A',esc,'[','C',nul,others=>nul);
+        ( esc,'[','D',esc,'[','A',esc,'[','C',nul,others=>nul);
     constant vt100_cursor_upleft : string(15 downto 1) := 
-        ( esc,'[','A',esc,'[','D',nul,others=>nul);
+        ( esc,'[','D',esc,'[','A',esc,'[','D',nul,others=>nul);
 
     constant vt100_cursor_downright: string(15 downto 1) := 
-        ( esc,'[','B',esc,'[','C',nul,others=>nul);
+        ( esc,'[','D',esc,'[','B',esc,'[','C',nul,others=>nul);
     constant vt100_cursor_downleft : string(15 downto 1) := 
-        ( esc,'[','B',esc,'[','D',nul,others=>nul);
+        ( esc,'[','D',esc,'[','B',esc,'[','D',nul,others=>nul);
 
     constant empty_string : string(15 downto 1) :=
         ( nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul );
@@ -488,7 +490,7 @@ begin
 
         -- to test the string writer state machine, write a string to Tx on
         -- each keypress
-        game_next_string <= empty_string;
+        game_next_string <= game_string;
 --        str_string <= (15=>nul,others=>nul);
         str_write_en <= '0';
         
@@ -503,7 +505,8 @@ begin
                 game_next_state <= GAME_STATE_TX_STRING_START;
 
             when GAME_STATE_IDLE =>
-                game_next_string <= (nul,others=>nul);
+                game_next_string <= empty_string;
+--                game_next_string <= (nul,others=>nul);
                 -- if the Rx UART has data
                 if rx_empty='0' then
                     -- we have characters we can transfer to the write 
@@ -530,42 +533,25 @@ begin
                     -- game drives Tx UART
                     game_en <= '1';
                 else 
-                    -- 
-                    -- evaluate the user input, choose a Vt100 string to move
-                    -- the cursor to new user position
-                    --
-                    game_next_state <= GAME_STATE_TX_STRING_START;
+                    if t_read_data < to_unsigned(16#30#,8) or 
+                       t_read_data > to_unsigned(16#39#,8) then
+                        -- invalid character; ignore it
+                        game_next_state <= GAME_STATE_IDLE;
+                    else 
+                        -- write a '#' in our current position
+                        game_next_data <= to_unsigned(16#23#,8);
+                        -- game drives Tx UART
+                        game_en <= '1';
 
-                    game_next_string <= game_move_response_string(t_read_data);
---                    -- for some reason a case statement didn't work here; 
---                    -- complained that my "move_xxx" constants were "not a
---                    -- locally static expression"
---                    -- 7 8 9
---                    if t_read_data=move_upright then
---                        game_next_string <= vt100_cursor_upright;
---                    elsif t_read_data=move_upleft then
---                        game_next_string <= vt100_cursor_upleft;
---                    elsif t_read_data=move_up then
---                        game_next_string <= vt100_cursor_up;
---
---                    -- 4 5 6
---                    elsif t_read_data=move_right then
---                        game_next_string <= vt100_cursor_right;
---                    elsif t_read_data=move_none then
---                        game_next_string <= empty_string;
---                    elsif t_read_data=move_left then
---                        game_next_string <= vt100_cursor_left;
---
---                    -- 1 2 3 
---                    elsif t_read_data=move_downright then
---                        game_next_string <= vt100_cursor_downright;
---                    elsif t_read_data=move_down then
---                        game_next_string <= vt100_cursor_down;
---                    elsif t_read_data=move_downleft then
---                        game_next_string <= vt100_cursor_downleft;
---                    else
---                        game_next_string <= empty_string;
---                    end if;
+                        -- 
+                        -- evaluate the user input, choose a Vt100 string to move
+                        -- the cursor to new user position
+                        --
+                        game_next_state <= GAME_STATE_TX_START;
+    --                    game_next_state <= GAME_STATE_TX_STRING_START;
+
+                        game_next_string <= game_move_response_string(t_read_data);
+                    end if;
                 end if;
 
             when GAME_STATE_TX_START =>
@@ -586,20 +572,17 @@ begin
                 game_en <= '1';
 
             when GAME_STATE_TX_WAIT =>
---                -- if sw(2) is enabled, drive an extra string out the serial
---                -- port to validate our string writer
---                if sw(2)='1' then
---                    -- XXX temp drive a test string
---                    -- TODO interpret user char, send command to change
---                    -- position
---                    game_next_string <= vt100_cursor_downleft;
---
---                    game_next_state <= GAME_STATE_TX_STRING_START;
---                else 
---                    game_next_state <= GAME_STATE_IDLE;
---                end if;
-                game_en <= '1';
-                game_next_state <= GAME_STATE_IDLE;
+                if sw(2)='1' then
+                    -- local echo mode; go back to idle
+                    game_next_state <= GAME_STATE_IDLE;
+                    -- game drives Tx UART
+                    game_en <= '1';
+                else 
+                    -- not in local echo mode; move to write a vt100 string
+                    game_next_state <= GAME_STATE_TX_STRING_START;
+                    -- string writer drives Tx UART
+                    game_en <= '0';
+                end if;
 
             when GAME_STATE_TX_STRING_START =>
                 -- transmit a hardcoded string to test our string writer
@@ -615,12 +598,14 @@ begin
                 str_write_en <= '0';
                 game_next_state <= GAME_STATE_TX_STRING_WAIT;
                 if str_write_complete='1' then
+                    game_next_string <= empty_string;
                     game_next_state <= GAME_STATE_IDLE;
                 end if;
 
             when GAME_STATE_TX_STRING_WAIT =>
                 -- wait for string writer to complete
                 if str_write_complete='1' then
+                    game_next_string <= empty_string;
                     game_next_state <= GAME_STATE_IDLE;
                 else
                     game_next_state <= GAME_STATE_TX_STRING_WAIT;
