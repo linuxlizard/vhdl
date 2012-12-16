@@ -77,6 +77,9 @@ architecture top_rs232_arch of top_rs232 is
     constant move_down      : unsigned(7 downto 0) := to_unsigned(16#32#,8); -- '2'
     constant move_downright : unsigned(7 downto 0) := to_unsigned(16#33#,8); -- '3'
 
+    --
+    -- decode incoming player input
+    -- return string to move cursor to correct position
     function game_move_response_string( user_char : in unsigned(7 downto 0) ) 
                    return string is
     begin
@@ -84,30 +87,32 @@ architecture top_rs232_arch of top_rs232 is
         -- complained that my "move_xxx" constants were "not a
         -- locally static expression"
         -- 7 8 9
-        if user_char=move_upright then
-            return vt100_cursor_upright;
-        elsif user_char=move_upleft then
+        if user_char=move_upleft then
             return vt100_cursor_upleft;
         elsif user_char=move_up then
             return vt100_cursor_up;
+        elsif user_char=move_upright then
+            return vt100_cursor_upright;
 
         -- 4 5 6
-        elsif user_char=move_right then
-            return vt100_cursor_right;
-        elsif user_char=move_none then
-            return empty_string;
         elsif user_char=move_left then
             return vt100_cursor_left;
+        elsif user_char=move_none then
+            return empty_string;
+        elsif user_char=move_right then
+            return vt100_cursor_right;
 
         -- 1 2 3 
-        elsif user_char=move_downright then
-            return vt100_cursor_downright;
-        elsif user_char=move_down then
-            return vt100_cursor_down;
         elsif user_char=move_downleft then
             return vt100_cursor_downleft;
+        elsif user_char=move_down then
+            return vt100_cursor_down;
+        elsif user_char=move_downright then
+            return vt100_cursor_downright;
+
         else
             return empty_string;
+
         end if;
 --        case user_char is
 --            when move_upright =>
@@ -136,6 +141,51 @@ architecture top_rs232_arch of top_rs232 is
 --
 --        end case;
     end function game_move_response_string;
+
+    procedure calc_position_offset( user_char : in unsigned(7 downto 0);
+                                    row_adj : out integer;
+                                    col_adj : out integer ) is
+    begin
+        -- for some reason a case statement didn't work here; 
+        -- complained that my "move_xxx" constants were "not a
+        -- locally static expression"
+        -- 7 8 9
+        if user_char=move_upleft then
+            row_adj := -1;
+            col_adj := -1;
+        elsif user_char=move_up then
+            row_adj := -1;
+            col_adj := 0;
+        elsif user_char=move_upright then
+            row_adj := -1;
+            col_adj := 1;
+
+        -- 4 5 6
+        elsif user_char=move_left then
+            row_adj := 0;
+            col_adj := -1;
+        elsif user_char=move_none then
+            row_adj := 0;
+            col_adj := 0;
+        elsif user_char=move_right then
+            row_adj := 0;
+            col_adj := 1;
+
+        -- 1 2 3 
+        elsif user_char=move_downleft then
+            row_adj := 1;
+            col_adj := -1;
+        elsif user_char=move_down then
+            row_adj := 1;
+            col_adj := 0;
+        elsif user_char=move_downright then
+            row_adj := 1;
+            col_adj := 1;
+        else
+            row_adj := 0;
+            col_adj := 0;
+        end if;
+    end procedure;
 
     component rs232 is
         port ( mclk : in std_logic;
@@ -299,8 +349,10 @@ architecture top_rs232_arch of top_rs232 is
     signal str_write_complete : std_logic;
 
     -- player position
-    signal player_row : unsigned(7 downto 0):= to_unsigned(1,8);
-    signal player_col : unsigned(7 downto 0):= to_unsigned(1,8);
+    signal player_row : integer := 1;
+    signal player_next_row : integer := 1;
+    signal player_col : integer := 1;
+    signal player_next_col : integer := 1;
 begin
     -- Reset Button
     reset <= sw(0);
@@ -465,12 +517,16 @@ begin
             game_data <= (others=>'0');
             game_tx_write_en <= '0';
             game_string <= empty_string;
+            player_row <= 1;
+            player_col <= 1;
         elsif( rising_edge(mclk)) then
             game_curr_state <= game_next_state;
             game_rx_pop <= game_next_rx_pop;
             game_data <= game_next_data;
             game_tx_write_en <= game_next_tx_write_en;
             game_string <= game_next_string;
+            player_row <= player_next_row;
+            player_col <= player_next_col;
         end if;
     end process game_sm_run;
 
@@ -482,6 +538,11 @@ begin
     process(game_curr_state,rx_empty,tx_full,game_rx_pop,
             game_data,game_tx_write_en,t_read_data,str_write_complete,
             sw) is
+        variable row_adj : integer;
+        variable col_adj : integer;
+        -- pragma synthesis off
+        variable s : line;
+        -- pragma synthesis on
     begin
         game_next_state <= game_curr_state;
         game_next_rx_pop <= game_rx_pop;
@@ -498,6 +559,10 @@ begin
 --        game_en <= '1';
         -- string writer drives Tx UART by default
         game_en <= '0';
+
+        -- player position
+        player_next_row <= player_row;
+        player_next_col <= player_col;
 
         case game_curr_state is
             when GAME_STATE_INIT =>
@@ -538,19 +603,37 @@ begin
                         -- invalid character; ignore it
                         game_next_state <= GAME_STATE_IDLE;
                     else 
-                        -- write a '#' in our current position
-                        game_next_data <= to_unsigned(16#23#,8);
-                        -- game drives Tx UART
-                        game_en <= '1';
+                        game_next_state <= GAME_STATE_IDLE;
 
-                        -- 
-                        -- evaluate the user input, choose a Vt100 string to move
-                        -- the cursor to new user position
-                        --
-                        game_next_state <= GAME_STATE_TX_START;
-    --                    game_next_state <= GAME_STATE_TX_STRING_START;
+                        calc_position_offset( t_read_data, row_adj, col_adj );        
 
-                        game_next_string <= game_move_response_string(t_read_data);
+                        -- pragma synthesis off
+                        write(s,string'("player adj row=")&integer'image(row_adj));
+                        write(s,string'(" col=")&integer'image(col_adj));
+                        writeline(output,s);
+                        -- pragma synthesis on
+
+                        if player_row+row_adj > 0 and
+                           player_row+row_adj < work.android_tools.row_width and
+                           player_col+col_adj > 0 and
+                           player_col+col_adj < work.android_tools.col_height then
+                            -- 
+                            -- write a '#' in our current position
+                            game_next_data <= to_unsigned(16#23#,8);
+                            -- game drives Tx UART
+                            game_en <= '1';
+
+                            player_next_row <= player_row + row_adj;
+                            player_next_col <= player_col + col_adj;
+
+                            -- 
+                            -- evaluate the user input, choose a Vt100 string to move
+                            -- the cursor to new user position
+                            --
+                            game_next_state <= GAME_STATE_TX_START;
+
+                            game_next_string <= game_move_response_string(t_read_data);
+                        end if;
                     end if;
                 end if;
 
