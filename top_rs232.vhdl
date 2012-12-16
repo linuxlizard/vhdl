@@ -25,6 +25,40 @@ entity top_rs232 is
 end entity top_rs232;
 
 architecture top_rs232_arch of top_rs232 is
+
+    constant vt100_clear_screen : string(15 downto 1) :=
+        ( esc,'[','2','J',nul,others=>nul);
+
+    constant vt100_move_home : string(15 downto 1) :=
+        ( esc,'[','1',';','1','H',nul,others=>nul);
+
+    -- Clear screen and move home all in one constant. Send this string at game
+    -- start to clear the terminal and position ourselves in upper left.
+    constant vt100_clear_screen_and_move_home : string(15 downto 1) :=
+        ( esc,'[','2','J',esc,'[','1',';','1','H',nul,others=>nul);
+
+    constant vt100_cursor_up : string(15 downto 1) := 
+        ( esc,'[','A',nul,others=>nul);
+    constant vt100_cursor_down : string(15 downto 1) := 
+        ( esc,'[','B',nul,others=>nul);
+    constant vt100_cursor_left : string(15 downto 1) := 
+        ( esc,'[','C',nul,others=>nul);
+    constant vt100_cursor_right : string(15 downto 1) := 
+        ( esc,'[','D',nul,others=>nul);
+
+    constant vt100_cursor_upleft : string(15 downto 1) := 
+        ( esc,'[','A',esc,'[','C',nul,others=>nul);
+    constant vt100_cursor_upright: string(15 downto 1) := 
+        ( esc,'[','A',esc,'[','D',nul,others=>nul);
+    constant vt100_cursor_downleft : string(15 downto 1) := 
+        ( esc,'[','B',esc,'[','C',nul,others=>nul);
+    constant vt100_cursor_downright: string(15 downto 1) := 
+        ( esc,'[','B',esc,'[','D',nul,others=>nul);
+
+    constant empty_string : string(15 downto 1) :=
+        ( nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul );
+--        ( nul, others=>nul );
+
     component rs232 is
         port ( mclk : in std_logic;
                 reset : in std_logic;
@@ -141,30 +175,47 @@ architecture top_rs232_arch of top_rs232 is
 
     -- local echo
     type echo_state is
-        ( ECHO_STATE_INIT, ECHO_STATE_START_POP, ECHO_STATE_DONE_POP,
-          ECHO_STATE_START_TX, ECHO_STATE_DONE_TX,
+        ( ECHO_STATE_INIT, 
+          ECHO_STATE_IDLE, 
+          ECHO_STATE_START_POP, 
+          ECHO_STATE_DONE_POP,
+
+          -- local echo ; drives the Rx'd char out the Tx
+          ECHO_STATE_TX_START, 
+          ECHO_STATE_TX_DONE,
+          ECHO_STATE_TX_WAIT,
+
           -- drive a string out the Tx on each keypress 
           -- (for testing string writer)
           ECHO_STATE_TX_STRING_START,
           ECHO_STATE_TX_STRING_DONE,
           ECHO_STATE_TX_STRING_WAIT
-          );
+        );
     signal echo_curr_state, echo_next_state : echo_state;
     signal echo_tx_write_en, echo_next_tx_write_en : std_logic := '0';
     signal echo_data, echo_next_data : unsigned (7 downto 0 ) := (others=>'0');
     signal echo_rx_pop, echo_next_rx_pop : std_logic := '0';
     signal echo_en : std_logic := '1';
 
-    -- string output
+    signal echo_string : string(15 downto 1) := (others=>nul);
+    signal next_echo_string : string(15 downto 1) := (others=>nul);
+
+    -- string output submachine (drives a null terminated string into the Tx
+    -- UART
     signal str_write_en : std_logic := '0';
     signal str_string : string(15 downto 1) := (others=>nul);
     signal str_tx_out_char : unsigned(7 downto 0);
     signal str_tx_write_en : std_logic;
     signal str_write_complete : std_logic;
 
+    -- player position
+    signal player_row : integer := 1;
+    signal player_col : integer := 1;
 begin
     -- Reset Button
     reset <= sw(0);
+
+--    str_string <= c_str_string;
 
     -- drive test pattern when sw(1) is high
     -- do local echo when sw(2) is high
@@ -319,13 +370,19 @@ begin
             echo_rx_pop <= '0';
             echo_data <= (others=>'0');
             echo_tx_write_en <= '0';
+            echo_string <= empty_string;
+--            echo_string <= (nul,nul,nul,others=>nul);
         elsif( rising_edge(mclk)) then
             echo_curr_state <= echo_next_state;
             echo_rx_pop <= echo_next_rx_pop;
             echo_data <= echo_next_data;
             echo_tx_write_en <= echo_next_tx_write_en;
+            echo_string <= next_echo_string;
         end if;
     end process echo_sm_run;
+
+    -- input to string transmitter
+    str_string <= echo_string;
 
     echo_sm :
     process(echo_curr_state,rx_empty,tx_full,echo_rx_pop,
@@ -339,83 +396,100 @@ begin
 
         -- to test the string writer state machine, write a string to Tx on
         -- each keypress
-        str_string <= (1=>nul,others=>nul);
+        next_echo_string <= empty_string;
+--        next_echo_string <= echo_string;
+--        str_string <= (15=>nul,others=>nul);
         str_write_en <= '0';
-
-        echo_en <= '1';
+        
+        -- echo drives Tx UART
+--        echo_en <= '1';
+        -- string writer drives Tx UART
+        echo_en <= '0';
 
         case echo_curr_state is
             when ECHO_STATE_INIT =>
+                next_echo_string <= vt100_clear_screen_and_move_home;
+                echo_next_state <= ECHO_STATE_TX_STRING_START;
+
+            when ECHO_STATE_IDLE =>
+                next_echo_string <= (nul,others=>nul);
                 -- if the Rx UART has data
                 if rx_empty='0' then
                     -- we have characters we can transfer to the write 
                     echo_next_state <= ECHO_STATE_START_POP;
                     echo_next_rx_pop <= '1';
+                    -- echo drives Tx UART
+                    echo_en <= '1';
                 end if;
 
             when ECHO_STATE_START_POP =>
                 echo_next_rx_pop <= '0';
---                echo_next_data <= t_read_data;
                 echo_next_state <= ECHO_STATE_DONE_POP;
+                -- echo drives Tx UART
+                echo_en <= '1';
 
             when ECHO_STATE_DONE_POP =>
                 -- we have popped a value from the Rx UART
                 echo_next_data <= t_read_data;
-                echo_next_state <= ECHO_STATE_START_TX;
+                echo_next_state <= ECHO_STATE_TX_START;
+                -- echo drives Tx UART
+                echo_en <= '1';
 
-            when ECHO_STATE_START_TX =>
+            when ECHO_STATE_TX_START =>
                 -- if the Tx UART has space
                 if tx_full='0' then
                     -- write our received byte to the Tx UART
                     echo_next_tx_write_en <= '1';
 
-                    echo_next_state <= ECHO_STATE_DONE_TX;
+                    echo_next_state <= ECHO_STATE_TX_DONE;
                 end if;
+                -- echo drives Tx UART
+                echo_en <= '1';
 
-            when ECHO_STATE_DONE_TX =>
+            when ECHO_STATE_TX_DONE =>
                 echo_next_tx_write_en <= '0';
+                echo_next_state <= ECHO_STATE_TX_WAIT;
+                -- echo drives Tx UART
+                echo_en <= '1';
 
+            when ECHO_STATE_TX_WAIT =>
                 -- if sw(2) is enabled, drive an extra string out the serial
                 -- port to validate our string writer
                 if sw(2)='1' then
+                    -- XXX temp drive a test string
+                    -- TODO interpret user char, send command to change
+                    -- position
+                    next_echo_string <= vt100_cursor_downleft;
+
                     echo_next_state <= ECHO_STATE_TX_STRING_START;
-                    -- let the string writer drive Tx
-                    echo_en <= '0';
                 else 
-                    echo_next_state <= ECHO_STATE_INIT;
+                    echo_next_state <= ECHO_STATE_IDLE;
                 end if;
 
             when ECHO_STATE_TX_STRING_START =>
                 -- transmit a hardcoded string to test our string writer
                 -- load the string writer with a string
-                str_string <= ('h','e','l','l','o',' ','w','o','r','l','d','!','@','#',nul);
-                str_write_en <= '1';
+                -- VT100 move to 1,1 (let's see if leading zeros work)
+--                str_string <= (esc,'[','0','1',';','0','1','H',nul,others=>nul);
+--                str_string <= vt100_cursor_downleft;
+--                str_string <= ('h','e','l','l','o',' ','w','o','r','l','d','!','@','#',nul);
                 echo_next_state <= ECHO_STATE_TX_STRING_DONE;
-
-                -- let the string writer drive Tx
-                echo_en <= '0';
+                str_write_en <= '1';
 
             when ECHO_STATE_TX_STRING_DONE =>
                 str_write_en <= '0';
                 echo_next_state <= ECHO_STATE_TX_STRING_WAIT;
 
-                -- let the string writer drive Tx
-                echo_en <= '0';
-
             when ECHO_STATE_TX_STRING_WAIT =>
                 -- wait for string writer to complete
                 if str_write_complete='1' then
-                    echo_next_state <= ECHO_STATE_INIT;
-                    -- echo will once again drive string writer
-                    echo_en <= '1';
+                    echo_next_state <= ECHO_STATE_IDLE;
                 else
                     echo_next_state <= ECHO_STATE_TX_STRING_WAIT;
-                    -- let the string writer drive Tx
-                    echo_en <= '0';
                 end if;
                 
             when others =>
-                echo_next_state <= ECHO_STATE_INIT;
+                echo_next_state <= ECHO_STATE_IDLE;
         end case;
     end process echo_sm;
 
