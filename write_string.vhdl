@@ -53,7 +53,8 @@ architecture write_string_arch of write_string is
 begin
     
     -- 
-    -- state machine to drive characters from string
+    -- state machine to drive characters from a null terminated 
+    -- string to a Tx UART
     -- 
     run_write_sm : process(reset,clk) is
     begin
@@ -90,6 +91,7 @@ begin
                         write_complete <= '1';
                         tx_write_en <= '0';
                     else
+                        -- shift the string 1 character left
                         tx_out_char <= to_unsigned(character'pos(curr_string(15)),8);
                         next_curr_string <= curr_string( 14 downto 1 ) & nul;
                         next_state <= write_string_next_state(curr_state);

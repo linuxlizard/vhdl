@@ -44,7 +44,9 @@ architecture test_write_string_arch of test_write_string is
     signal t_tx_out_char : unsigned(7 downto 0);
     signal t_tx_write_en : std_logic;
     signal t_write_complete : std_logic;
+
 begin
+
     -- this is the main clock
     clock1 : process is
     begin
@@ -66,6 +68,13 @@ begin
                 write_complete=>t_write_complete );
 
     stimulus : process 
+        variable s : line;
+        variable row : integer := 0;
+        variable col : integer := 0;
+--        variable row_s : string(3 downto 1);
+        variable row_s : string(2 downto 1);
+        variable col_s : string(2 downto 1);
+--        variable col_s : string;
     begin
         debug_num <= 0;
         wait for clk_period;
@@ -76,6 +85,32 @@ begin
         wait for clk_period;
 
         t_string <= ('h','e','l','l','o',' ','w','o','r','l','d','!','@','#',nul);
+        t_string <= (esc,'[','0','1',';','0','1','H',nul,others=>nul);
+        t_string(13) <= '2';
+        t_string(12) <= '2';
+        t_string(10) <= '1';
+        t_string(9) <= '1';
+
+        row := 12;
+        col := 42;
+
+        -- tinker with dynamic strings
+        -- davep 16-dec-2012 ; this was an utter failure in synthesis
+        --  I could rewrite the string with constants but the return valud of a
+        --  function did not work. Synthesis failed.
+        row_s := work.android_tools.write_pos(row);
+        col_s := work.android_tools.write_pos(col);
+        write(s,string'("row="));
+        write(s,row_s);
+        write(s,string'(" col="));
+        write(s,col_s);
+        writeline(output,s);
+
+        t_string(13) <= row_s(2);
+        t_string(12) <= row_s(1);
+        t_string(10) <= col_s(2);
+        t_string(9) <= col_s(1);
+
         wait for clk_period;
 
         t_write_en <= '1';

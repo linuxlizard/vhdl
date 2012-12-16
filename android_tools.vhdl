@@ -1,3 +1,9 @@
+-- Utility functions for Androids game project
+--
+-- ECE 530 Fall 2012
+--
+-- David Poole
+-- 15-Dec-2012
 
 library ieee;
 use ieee.std_logic_1164.ALL;
