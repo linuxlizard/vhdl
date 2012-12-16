@@ -37,27 +37,74 @@ architecture top_rs232_arch of top_rs232 is
     constant vt100_clear_screen_and_move_home : string(15 downto 1) :=
         ( esc,'[','2','J',esc,'[','1',';','1','H',nul,others=>nul);
 
+    -- vt100 sequences for cursor movement
     constant vt100_cursor_up : string(15 downto 1) := 
         ( esc,'[','A',nul,others=>nul);
     constant vt100_cursor_down : string(15 downto 1) := 
         ( esc,'[','B',nul,others=>nul);
-    constant vt100_cursor_left : string(15 downto 1) := 
-        ( esc,'[','C',nul,others=>nul);
+
     constant vt100_cursor_right : string(15 downto 1) := 
+        ( esc,'[','C',nul,others=>nul);
+    constant vt100_cursor_left : string(15 downto 1) := 
         ( esc,'[','D',nul,others=>nul);
 
-    constant vt100_cursor_upleft : string(15 downto 1) := 
-        ( esc,'[','A',esc,'[','C',nul,others=>nul);
     constant vt100_cursor_upright: string(15 downto 1) := 
+        ( esc,'[','A',esc,'[','C',nul,others=>nul);
+    constant vt100_cursor_upleft : string(15 downto 1) := 
         ( esc,'[','A',esc,'[','D',nul,others=>nul);
-    constant vt100_cursor_downleft : string(15 downto 1) := 
-        ( esc,'[','B',esc,'[','C',nul,others=>nul);
+
     constant vt100_cursor_downright: string(15 downto 1) := 
+        ( esc,'[','B',esc,'[','C',nul,others=>nul);
+    constant vt100_cursor_downleft : string(15 downto 1) := 
         ( esc,'[','B',esc,'[','D',nul,others=>nul);
 
     constant empty_string : string(15 downto 1) :=
         ( nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul );
 --        ( nul, others=>nul );
+
+    -- character motion input characters
+    constant move_upleft  : unsigned(7 downto 0) := to_unsigned(16#37#,8); -- '7'
+    constant move_up      : unsigned(7 downto 0) := to_unsigned(16#38#,8); -- '8'
+    constant move_upright : unsigned(7 downto 0) := to_unsigned(16#39#,8); -- '9'
+
+    constant move_left  : unsigned(7 downto 0) := to_unsigned(16#34#,8); -- '4'
+    constant move_none  : unsigned(7 downto 0) := to_unsigned(16#35#,8); -- '5'
+    constant move_right : unsigned(7 downto 0) := to_unsigned(16#36#,8); -- '6'
+
+    constant move_downleft  : unsigned(7 downto 0) := to_unsigned(16#31#,8); -- '1'
+    constant move_down      : unsigned(7 downto 0) := to_unsigned(16#32#,8); -- '2'
+    constant move_downright : unsigned(7 downto 0) := to_unsigned(16#33#,8); -- '3'
+
+--    function game_move_response_string( user_char : in unsigned(7 downto 0) ) 
+--                   return string is
+--    begin
+--        case user_char is
+--            when move_upright =>
+--                return vt100_cursor_upright;
+--            when move_up =>
+--                return vt100_cursor_up;
+--            when move_upleft =>
+--                return vt100_cursor_upleft;
+--
+--            when move_left =>
+--                return vt100_cursor_left;
+--            when move_right =>
+--                return vt100_cursor_right;
+--            when move_none =>
+--                return empty_string;
+--
+--            when move_downright =>
+--                return vt100_cursor_downright;
+--            when move_downleft =>
+--                return vt100_cursor_downleft;
+--            when move_down =>
+--                return vt100_cursor_down;
+--
+--            when others =>
+--                return empty_string;
+--
+--        end case;
+--    end;
 
     component rs232 is
         port ( mclk : in std_logic;
@@ -173,32 +220,31 @@ architecture top_rs232_arch of top_rs232 is
     signal seven_seg_word : std_logic_vector(15 downto 0);
     signal next_seven_seg_word : std_logic_vector(15 downto 0);
 
-    -- local echo
-    type echo_state is
-        ( ECHO_STATE_INIT, 
-          ECHO_STATE_IDLE, 
-          ECHO_STATE_START_POP, 
-          ECHO_STATE_DONE_POP,
+    -- The Game state machine
+    type game_state is
+        ( GAME_STATE_INIT, 
+          GAME_STATE_IDLE, 
+          GAME_STATE_START_POP, 
+          GAME_STATE_DONE_POP,
 
-          -- local echo ; drives the Rx'd char out the Tx
-          ECHO_STATE_TX_START, 
-          ECHO_STATE_TX_DONE,
-          ECHO_STATE_TX_WAIT,
+          -- local echo ; drives the Rx'd char to Tx UART
+          GAME_STATE_TX_START, 
+          GAME_STATE_TX_DONE,
+          GAME_STATE_TX_WAIT,
 
-          -- drive a string out the Tx on each keypress 
-          -- (for testing string writer)
-          ECHO_STATE_TX_STRING_START,
-          ECHO_STATE_TX_STRING_DONE,
-          ECHO_STATE_TX_STRING_WAIT
+          -- drive a null terminated string to the Tx UART
+          GAME_STATE_TX_STRING_START,
+          GAME_STATE_TX_STRING_DONE,
+          GAME_STATE_TX_STRING_WAIT
         );
-    signal echo_curr_state, echo_next_state : echo_state;
-    signal echo_tx_write_en, echo_next_tx_write_en : std_logic := '0';
-    signal echo_data, echo_next_data : unsigned (7 downto 0 ) := (others=>'0');
-    signal echo_rx_pop, echo_next_rx_pop : std_logic := '0';
-    signal echo_en : std_logic := '1';
+    signal game_curr_state, game_next_state : game_state;
+    signal game_tx_write_en, game_next_tx_write_en : std_logic := '0';
+    signal game_data, game_next_data : unsigned (7 downto 0 ) := (others=>'0');
+    signal game_rx_pop, game_next_rx_pop : std_logic := '0';
+    signal game_en : std_logic := '1';
 
-    signal echo_string : string(15 downto 1) := (others=>nul);
-    signal next_echo_string : string(15 downto 1) := (others=>nul);
+    signal game_string : string(15 downto 1) := (others=>nul);
+    signal next_game_string : string(15 downto 1) := (others=>nul);
 
     -- string output submachine (drives a null terminated string into the Tx
     -- UART
@@ -209,8 +255,8 @@ architecture top_rs232_arch of top_rs232 is
     signal str_write_complete : std_logic;
 
     -- player position
-    signal player_row : integer := 1;
-    signal player_col : integer := 1;
+    signal player_row : unsigned(7 downto 0):= to_unsigned(1,8);
+    signal player_col : unsigned(7 downto 0):= to_unsigned(1,8);
 begin
     -- Reset Button
     reset <= sw(0);
@@ -221,7 +267,7 @@ begin
     -- do local echo when sw(2) is high
     -- otherwise, drive string out Tx on keypress
     test_pattern_en <= sw(1);
---    echo_en <= sw(2);
+--    game_en <= sw(2);
 
     -- Led set to current recieved byte
     led <= std_logic_vector(t_read_data);
@@ -257,10 +303,10 @@ begin
                  );
 
     t_write_data <= tp_write_data when test_pattern_en='1' else
-                    echo_data when echo_en='1' else
+                    game_data when game_en='1' else
                     str_tx_out_char;
     t_write_en <= tp_write_en when test_pattern_en='1' else
-                  echo_tx_write_en when echo_en='1' else
+                  game_tx_write_en when game_en='1' else
                   str_tx_write_en;
 
     -- pragma synthesis off
@@ -293,7 +339,7 @@ begin
                  );
 
     t_read_en <= '0' when test_pattern_en='1' else
-                 echo_rx_pop;
+                 game_rx_pop;
     --
     --  State machine to drive rotating character pattern output. Writes
     --  the characters ' ' (space, 0x20) to '~' (tilde, 0x7e) forever.
@@ -361,137 +407,196 @@ begin
     end process tp_char_write_sm;
 
     -- 
-    -- state machine to drive local echo
+    -- state machine to drive game
     -- 
-    echo_sm_run : process(reset,mclk) is
+    game_sm_run : process(reset,mclk) is
     begin
         if( reset='1') then
-            echo_curr_state <= ECHO_STATE_INIT;
-            echo_rx_pop <= '0';
-            echo_data <= (others=>'0');
-            echo_tx_write_en <= '0';
-            echo_string <= empty_string;
---            echo_string <= (nul,nul,nul,others=>nul);
+            game_curr_state <= GAME_STATE_INIT;
+            game_rx_pop <= '0';
+            game_data <= (others=>'0');
+            game_tx_write_en <= '0';
+            game_string <= empty_string;
         elsif( rising_edge(mclk)) then
-            echo_curr_state <= echo_next_state;
-            echo_rx_pop <= echo_next_rx_pop;
-            echo_data <= echo_next_data;
-            echo_tx_write_en <= echo_next_tx_write_en;
-            echo_string <= next_echo_string;
+            game_curr_state <= game_next_state;
+            game_rx_pop <= game_next_rx_pop;
+            game_data <= game_next_data;
+            game_tx_write_en <= game_next_tx_write_en;
+            game_string <= next_game_string;
         end if;
-    end process echo_sm_run;
+    end process game_sm_run;
 
-    -- input to string transmitter
-    str_string <= echo_string;
+    -- input to string transmitter which sends a null terminated string to the
+    -- Tx UART
+    str_string <= game_string;
 
-    echo_sm :
-    process(echo_curr_state,rx_empty,tx_full,echo_rx_pop,
-            echo_data,echo_tx_write_en,t_read_data,str_write_complete,
+    game_sm :
+    process(game_curr_state,rx_empty,tx_full,game_rx_pop,
+            game_data,game_tx_write_en,t_read_data,str_write_complete,
             sw) is
     begin
-        echo_next_state <= echo_curr_state;
-        echo_next_rx_pop <= echo_rx_pop;
-        echo_next_data <= echo_data;
-        echo_next_tx_write_en <= echo_tx_write_en;
+        game_next_state <= game_curr_state;
+        game_next_rx_pop <= game_rx_pop;
+        game_next_data <= game_data;
+        game_next_tx_write_en <= game_tx_write_en;
 
         -- to test the string writer state machine, write a string to Tx on
         -- each keypress
-        next_echo_string <= empty_string;
---        next_echo_string <= echo_string;
+        next_game_string <= empty_string;
 --        str_string <= (15=>nul,others=>nul);
         str_write_en <= '0';
         
-        -- echo drives Tx UART
---        echo_en <= '1';
-        -- string writer drives Tx UART
-        echo_en <= '0';
+        -- game drives Tx UART
+--        game_en <= '1';
+        -- string writer drives Tx UART by default
+        game_en <= '0';
 
-        case echo_curr_state is
-            when ECHO_STATE_INIT =>
-                next_echo_string <= vt100_clear_screen_and_move_home;
-                echo_next_state <= ECHO_STATE_TX_STRING_START;
+        case game_curr_state is
+            when GAME_STATE_INIT =>
+                next_game_string <= vt100_clear_screen_and_move_home;
+                game_next_state <= GAME_STATE_TX_STRING_START;
 
-            when ECHO_STATE_IDLE =>
-                next_echo_string <= (nul,others=>nul);
+            when GAME_STATE_IDLE =>
+                next_game_string <= (nul,others=>nul);
                 -- if the Rx UART has data
                 if rx_empty='0' then
                     -- we have characters we can transfer to the write 
-                    echo_next_state <= ECHO_STATE_START_POP;
-                    echo_next_rx_pop <= '1';
-                    -- echo drives Tx UART
-                    echo_en <= '1';
+                    game_next_state <= GAME_STATE_START_POP;
+                    game_next_rx_pop <= '1';
+                    -- game drives Tx UART
+--                    game_en <= '1';
                 end if;
 
-            when ECHO_STATE_START_POP =>
-                echo_next_rx_pop <= '0';
-                echo_next_state <= ECHO_STATE_DONE_POP;
-                -- echo drives Tx UART
-                echo_en <= '1';
+            when GAME_STATE_START_POP =>
+                game_next_rx_pop <= '0';
+                game_next_state <= GAME_STATE_DONE_POP;
+                -- game drives Tx UART
+--                game_en <= '1';
 
-            when ECHO_STATE_DONE_POP =>
+            when GAME_STATE_DONE_POP =>
                 -- we have popped a value from the Rx UART
-                echo_next_data <= t_read_data;
-                echo_next_state <= ECHO_STATE_TX_START;
-                -- echo drives Tx UART
-                echo_en <= '1';
+                game_next_data <= t_read_data;
 
-            when ECHO_STATE_TX_START =>
+                if sw(2)='1' then
+                    game_next_state <= GAME_STATE_TX_START;
+                    -- game drives Tx UART
+                    game_en <= '1';
+                else 
+                    game_next_state <= GAME_STATE_TX_STRING_START;
+
+                    -- 7 8 9
+                    if t_read_data=move_upright then
+                        next_game_string <= vt100_cursor_upright;
+                    elsif t_read_data=move_upleft then
+                        next_game_string <= vt100_cursor_upleft;
+                    elsif t_read_data=move_up then
+                        next_game_string <= vt100_cursor_up;
+
+                    -- 4 5 6
+                    elsif t_read_data=move_right then
+                        next_game_string <= vt100_cursor_right;
+                    elsif t_read_data=move_none then
+                        next_game_string <= empty_string;
+                    elsif t_read_data=move_left then
+                        next_game_string <= vt100_cursor_left;
+
+                    -- 1 2 3 
+                    elsif t_read_data=move_downright then
+                        next_game_string <= vt100_cursor_downright;
+                    elsif t_read_data=move_down then
+                        next_game_string <= vt100_cursor_down;
+                    elsif t_read_data=move_downleft then
+                        next_game_string <= vt100_cursor_downleft;
+                    else
+                        next_game_string <= empty_string;
+                    end if;
+                end if;
+
+--                case t_read_data is
+--                    when move_upright =>
+--                        next_game_string <= vt100_cursor_upright;
+--                    when move_up =>
+--                        next_game_string <= vt100_cursor_up;
+--                    when move_upleft =>
+--                        next_game_string <= vt100_cursor_upleft;
+--
+--                    when move_left =>
+--                        next_game_string <= vt100_cursor_left;
+--                    when move_right =>
+--                        next_game_string <= vt100_cursor_right;
+--                    when move_none =>
+--                        next_game_string <= empty_string;
+--
+--                    when move_downright =>
+--                        next_game_string <= vt100_cursor_downright;
+--                    when move_downleft =>
+--                        next_game_string <= vt100_cursor_downleft;
+--                    when move_down =>
+--                        next_game_string <= vt100_cursor_down;
+--
+--                    when others =>
+--                        next_game_string <= empty_string;
+--                end case;
+
+            when GAME_STATE_TX_START =>
                 -- if the Tx UART has space
                 if tx_full='0' then
                     -- write our received byte to the Tx UART
-                    echo_next_tx_write_en <= '1';
+                    game_next_tx_write_en <= '1';
 
-                    echo_next_state <= ECHO_STATE_TX_DONE;
+                    game_next_state <= GAME_STATE_TX_DONE;
                 end if;
-                -- echo drives Tx UART
-                echo_en <= '1';
+                -- game drives Tx UART
+                game_en <= '1';
 
-            when ECHO_STATE_TX_DONE =>
-                echo_next_tx_write_en <= '0';
-                echo_next_state <= ECHO_STATE_TX_WAIT;
-                -- echo drives Tx UART
-                echo_en <= '1';
+            when GAME_STATE_TX_DONE =>
+                game_next_tx_write_en <= '0';
+                game_next_state <= GAME_STATE_TX_WAIT;
+                -- game drives Tx UART
+                game_en <= '1';
 
-            when ECHO_STATE_TX_WAIT =>
+            when GAME_STATE_TX_WAIT =>
                 -- if sw(2) is enabled, drive an extra string out the serial
                 -- port to validate our string writer
-                if sw(2)='1' then
-                    -- XXX temp drive a test string
-                    -- TODO interpret user char, send command to change
-                    -- position
-                    next_echo_string <= vt100_cursor_downleft;
+--                if sw(2)='1' then
+--                    -- XXX temp drive a test string
+--                    -- TODO interpret user char, send command to change
+--                    -- position
+--                    next_game_string <= vt100_cursor_downleft;
+--
+--                    game_next_state <= GAME_STATE_TX_STRING_START;
+--                else 
+--                    game_next_state <= GAME_STATE_IDLE;
+--                end if;
+                game_en <= '1';
+                game_next_state <= GAME_STATE_IDLE;
 
-                    echo_next_state <= ECHO_STATE_TX_STRING_START;
-                else 
-                    echo_next_state <= ECHO_STATE_IDLE;
-                end if;
-
-            when ECHO_STATE_TX_STRING_START =>
+            when GAME_STATE_TX_STRING_START =>
                 -- transmit a hardcoded string to test our string writer
                 -- load the string writer with a string
                 -- VT100 move to 1,1 (let's see if leading zeros work)
 --                str_string <= (esc,'[','0','1',';','0','1','H',nul,others=>nul);
 --                str_string <= vt100_cursor_downleft;
 --                str_string <= ('h','e','l','l','o',' ','w','o','r','l','d','!','@','#',nul);
-                echo_next_state <= ECHO_STATE_TX_STRING_DONE;
+                game_next_state <= GAME_STATE_TX_STRING_DONE;
                 str_write_en <= '1';
 
-            when ECHO_STATE_TX_STRING_DONE =>
+            when GAME_STATE_TX_STRING_DONE =>
                 str_write_en <= '0';
-                echo_next_state <= ECHO_STATE_TX_STRING_WAIT;
+                game_next_state <= GAME_STATE_TX_STRING_WAIT;
 
-            when ECHO_STATE_TX_STRING_WAIT =>
+            when GAME_STATE_TX_STRING_WAIT =>
                 -- wait for string writer to complete
                 if str_write_complete='1' then
-                    echo_next_state <= ECHO_STATE_IDLE;
+                    game_next_state <= GAME_STATE_IDLE;
                 else
-                    echo_next_state <= ECHO_STATE_TX_STRING_WAIT;
+                    game_next_state <= GAME_STATE_TX_STRING_WAIT;
                 end if;
                 
             when others =>
-                echo_next_state <= ECHO_STATE_IDLE;
+                game_next_state <= GAME_STATE_IDLE;
         end case;
-    end process echo_sm;
+    end process game_sm;
 
     --
     -- Write a string on keystroke (test for string writing in synthesis)
