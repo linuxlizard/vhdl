@@ -78,35 +78,35 @@ architecture top_rs232_arch of top_rs232 is
     function game_move_response_string( user_char : in unsigned(7 downto 0) ) 
                    return string is
     begin
-                    -- for some reason a case statement didn't work here; 
-                    -- complained that my "move_xxx" constants were "not a
-                    -- locally static expression"
-                    -- 7 8 9
-                    if user_char=move_upright then
-                        return vt100_cursor_upright;
-                    elsif user_char=move_upleft then
-                        return vt100_cursor_upleft;
-                    elsif user_char=move_up then
-                        return vt100_cursor_up;
+        -- for some reason a case statement didn't work here; 
+        -- complained that my "move_xxx" constants were "not a
+        -- locally static expression"
+        -- 7 8 9
+        if user_char=move_upright then
+            return vt100_cursor_upright;
+        elsif user_char=move_upleft then
+            return vt100_cursor_upleft;
+        elsif user_char=move_up then
+            return vt100_cursor_up;
 
-                    -- 4 5 6
-                    elsif user_char=move_right then
-                        return vt100_cursor_right;
-                    elsif user_char=move_none then
-                        return empty_string;
-                    elsif user_char=move_left then
-                        return vt100_cursor_left;
+        -- 4 5 6
+        elsif user_char=move_right then
+            return vt100_cursor_right;
+        elsif user_char=move_none then
+            return empty_string;
+        elsif user_char=move_left then
+            return vt100_cursor_left;
 
-                    -- 1 2 3 
-                    elsif user_char=move_downright then
-                        return vt100_cursor_downright;
-                    elsif user_char=move_down then
-                        return vt100_cursor_down;
-                    elsif user_char=move_downleft then
-                        return vt100_cursor_downleft;
-                    else
-                        return empty_string;
-                    end if;
+        -- 1 2 3 
+        elsif user_char=move_downright then
+            return vt100_cursor_downright;
+        elsif user_char=move_down then
+            return vt100_cursor_down;
+        elsif user_char=move_downleft then
+            return vt100_cursor_downleft;
+        else
+            return empty_string;
+        end if;
 --        case user_char is
 --            when move_upright =>
 --                return vt100_cursor_upright;
@@ -286,7 +286,7 @@ architecture top_rs232_arch of top_rs232 is
     signal game_en : std_logic := '1';
 
     signal game_string : string(15 downto 1) := (others=>nul);
-    signal next_game_string : string(15 downto 1) := (others=>nul);
+    signal game_next_string : string(15 downto 1) := (others=>nul);
 
     -- string output submachine (drives a null terminated string into the Tx
     -- UART
@@ -311,7 +311,7 @@ begin
     test_pattern_en <= sw(1);
 --    game_en <= sw(2);
 
-    -- Led set to current recieved byte
+    -- Led set to current received byte
     led <= std_logic_vector(t_read_data);
     -- attach the receiver to the bottom LED
 --    led <= sw(7 downto 1) & t_rx;
@@ -380,6 +380,8 @@ begin
                     debug_write_en => rx_debug_write_en
                  );
 
+    -- disable Rx UART when we're in test pattern mode
+    -- enabled when we're in game mode
     t_read_en <= '0' when test_pattern_en='1' else
                  game_rx_pop;
     --
@@ -449,7 +451,9 @@ begin
     end process tp_char_write_sm;
 
     -- 
-    -- state machine to drive game
+    -- The Big Enchilada.
+    -- 
+    -- state machine to drive game (started as local echo state machine)
     -- 
     game_sm_run : process(reset,mclk) is
     begin
@@ -464,7 +468,7 @@ begin
             game_rx_pop <= game_next_rx_pop;
             game_data <= game_next_data;
             game_tx_write_en <= game_next_tx_write_en;
-            game_string <= next_game_string;
+            game_string <= game_next_string;
         end if;
     end process game_sm_run;
 
@@ -484,7 +488,7 @@ begin
 
         -- to test the string writer state machine, write a string to Tx on
         -- each keypress
-        next_game_string <= empty_string;
+        game_next_string <= empty_string;
 --        str_string <= (15=>nul,others=>nul);
         str_write_en <= '0';
         
@@ -495,11 +499,11 @@ begin
 
         case game_curr_state is
             when GAME_STATE_INIT =>
-                next_game_string <= vt100_clear_screen_and_move_home;
+                game_next_string <= vt100_clear_screen_and_move_home;
                 game_next_state <= GAME_STATE_TX_STRING_START;
 
             when GAME_STATE_IDLE =>
-                next_game_string <= (nul,others=>nul);
+                game_next_string <= (nul,others=>nul);
                 -- if the Rx UART has data
                 if rx_empty='0' then
                     -- we have characters we can transfer to the write 
@@ -532,35 +536,35 @@ begin
                     --
                     game_next_state <= GAME_STATE_TX_STRING_START;
 
-                    next_game_string <= game_move_response_string(t_read_data);
+                    game_next_string <= game_move_response_string(t_read_data);
 --                    -- for some reason a case statement didn't work here; 
 --                    -- complained that my "move_xxx" constants were "not a
 --                    -- locally static expression"
 --                    -- 7 8 9
 --                    if t_read_data=move_upright then
---                        next_game_string <= vt100_cursor_upright;
+--                        game_next_string <= vt100_cursor_upright;
 --                    elsif t_read_data=move_upleft then
---                        next_game_string <= vt100_cursor_upleft;
+--                        game_next_string <= vt100_cursor_upleft;
 --                    elsif t_read_data=move_up then
---                        next_game_string <= vt100_cursor_up;
+--                        game_next_string <= vt100_cursor_up;
 --
 --                    -- 4 5 6
 --                    elsif t_read_data=move_right then
---                        next_game_string <= vt100_cursor_right;
+--                        game_next_string <= vt100_cursor_right;
 --                    elsif t_read_data=move_none then
---                        next_game_string <= empty_string;
+--                        game_next_string <= empty_string;
 --                    elsif t_read_data=move_left then
---                        next_game_string <= vt100_cursor_left;
+--                        game_next_string <= vt100_cursor_left;
 --
 --                    -- 1 2 3 
 --                    elsif t_read_data=move_downright then
---                        next_game_string <= vt100_cursor_downright;
+--                        game_next_string <= vt100_cursor_downright;
 --                    elsif t_read_data=move_down then
---                        next_game_string <= vt100_cursor_down;
+--                        game_next_string <= vt100_cursor_down;
 --                    elsif t_read_data=move_downleft then
---                        next_game_string <= vt100_cursor_downleft;
+--                        game_next_string <= vt100_cursor_downleft;
 --                    else
---                        next_game_string <= empty_string;
+--                        game_next_string <= empty_string;
 --                    end if;
                 end if;
 
@@ -582,13 +586,13 @@ begin
                 game_en <= '1';
 
             when GAME_STATE_TX_WAIT =>
-                -- if sw(2) is enabled, drive an extra string out the serial
-                -- port to validate our string writer
+--                -- if sw(2) is enabled, drive an extra string out the serial
+--                -- port to validate our string writer
 --                if sw(2)='1' then
 --                    -- XXX temp drive a test string
 --                    -- TODO interpret user char, send command to change
 --                    -- position
---                    next_game_string <= vt100_cursor_downleft;
+--                    game_next_string <= vt100_cursor_downleft;
 --
 --                    game_next_state <= GAME_STATE_TX_STRING_START;
 --                else 
@@ -628,7 +632,7 @@ begin
     end process game_sm;
 
     --
-    -- Write a string on keystroke (test for string writing in synthesis)
+    -- Write a string on to Tx UART
     --
     write_string_subsm : write_string 
         port map(clk=>mclk,
@@ -644,26 +648,12 @@ begin
                 -- pulses on completion of the write 
                 write_complete=>str_write_complete );
 
---    write_string_on_key : process(reset,mclk,rx_empty) is
---    begin
---        if reset='0' then
---            str_write_en <= '0';
---        elsif rising_edge(mclk) then
---            if rx_empty='0' then
---                str_write_en <= '1';
---                str_string <= ('h','e','l','l','o',' ','w','o','r','l','d','!','@','#',nul);
---            else
---                str_write_en <= '0';
---            end if;
---        end if;
---    end process write_string_on_key;
-
     --
     -- PIO
     --
     --  DTE/DCE Signals
     --
-    --  Signals for logic analyzer
+    --  Signals for logic analyzer and RS232 port
     --
 
     -- RTX? CTX?  72/75 are RTX/CTX. Not using right now.
