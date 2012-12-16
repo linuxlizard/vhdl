@@ -75,9 +75,38 @@ architecture top_rs232_arch of top_rs232 is
     constant move_down      : unsigned(7 downto 0) := to_unsigned(16#32#,8); -- '2'
     constant move_downright : unsigned(7 downto 0) := to_unsigned(16#33#,8); -- '3'
 
---    function game_move_response_string( user_char : in unsigned(7 downto 0) ) 
---                   return string is
---    begin
+    function game_move_response_string( user_char : in unsigned(7 downto 0) ) 
+                   return string is
+    begin
+                    -- for some reason a case statement didn't work here; 
+                    -- complained that my "move_xxx" constants were "not a
+                    -- locally static expression"
+                    -- 7 8 9
+                    if user_char=move_upright then
+                        return vt100_cursor_upright;
+                    elsif user_char=move_upleft then
+                        return vt100_cursor_upleft;
+                    elsif user_char=move_up then
+                        return vt100_cursor_up;
+
+                    -- 4 5 6
+                    elsif user_char=move_right then
+                        return vt100_cursor_right;
+                    elsif user_char=move_none then
+                        return empty_string;
+                    elsif user_char=move_left then
+                        return vt100_cursor_left;
+
+                    -- 1 2 3 
+                    elsif user_char=move_downright then
+                        return vt100_cursor_downright;
+                    elsif user_char=move_down then
+                        return vt100_cursor_down;
+                    elsif user_char=move_downleft then
+                        return vt100_cursor_downleft;
+                    else
+                        return empty_string;
+                    end if;
 --        case user_char is
 --            when move_upright =>
 --                return vt100_cursor_upright;
@@ -104,7 +133,7 @@ architecture top_rs232_arch of top_rs232 is
 --                return empty_string;
 --
 --        end case;
---    end;
+    end function game_move_response_string;
 
     component rs232 is
         port ( mclk : in std_logic;
@@ -186,6 +215,19 @@ architecture top_rs232_arch of top_rs232 is
                 write_complete : out std_logic
              );
     end component write_string;
+
+    component board is
+        port ( clk : in std_logic;
+                reset : in std_logic;
+                write_en : in std_logic;
+
+                row : in integer;
+                col : in integer;
+
+                data_in : in unsigned(7 downto 0);
+                data_out : out unsigned(7 downto 0)
+             );
+    end component board;
 
     signal reset : std_logic := '1';
 
@@ -477,66 +519,50 @@ begin
                 -- we have popped a value from the Rx UART
                 game_next_data <= t_read_data;
 
+                -- sw(2) is a "local echo" mode; simply re-write the received
+                -- character back out the Tx UART
                 if sw(2)='1' then
                     game_next_state <= GAME_STATE_TX_START;
                     -- game drives Tx UART
                     game_en <= '1';
                 else 
+                    -- 
+                    -- evaluate the user input, choose a Vt100 string to move
+                    -- the cursor to new user position
+                    --
                     game_next_state <= GAME_STATE_TX_STRING_START;
 
-                    -- 7 8 9
-                    if t_read_data=move_upright then
-                        next_game_string <= vt100_cursor_upright;
-                    elsif t_read_data=move_upleft then
-                        next_game_string <= vt100_cursor_upleft;
-                    elsif t_read_data=move_up then
-                        next_game_string <= vt100_cursor_up;
-
-                    -- 4 5 6
-                    elsif t_read_data=move_right then
-                        next_game_string <= vt100_cursor_right;
-                    elsif t_read_data=move_none then
-                        next_game_string <= empty_string;
-                    elsif t_read_data=move_left then
-                        next_game_string <= vt100_cursor_left;
-
-                    -- 1 2 3 
-                    elsif t_read_data=move_downright then
-                        next_game_string <= vt100_cursor_downright;
-                    elsif t_read_data=move_down then
-                        next_game_string <= vt100_cursor_down;
-                    elsif t_read_data=move_downleft then
-                        next_game_string <= vt100_cursor_downleft;
-                    else
-                        next_game_string <= empty_string;
-                    end if;
-                end if;
-
---                case t_read_data is
---                    when move_upright =>
+                    next_game_string <= game_move_response_string(t_read_data);
+--                    -- for some reason a case statement didn't work here; 
+--                    -- complained that my "move_xxx" constants were "not a
+--                    -- locally static expression"
+--                    -- 7 8 9
+--                    if t_read_data=move_upright then
 --                        next_game_string <= vt100_cursor_upright;
---                    when move_up =>
---                        next_game_string <= vt100_cursor_up;
---                    when move_upleft =>
+--                    elsif t_read_data=move_upleft then
 --                        next_game_string <= vt100_cursor_upleft;
+--                    elsif t_read_data=move_up then
+--                        next_game_string <= vt100_cursor_up;
 --
---                    when move_left =>
---                        next_game_string <= vt100_cursor_left;
---                    when move_right =>
+--                    -- 4 5 6
+--                    elsif t_read_data=move_right then
 --                        next_game_string <= vt100_cursor_right;
---                    when move_none =>
+--                    elsif t_read_data=move_none then
 --                        next_game_string <= empty_string;
+--                    elsif t_read_data=move_left then
+--                        next_game_string <= vt100_cursor_left;
 --
---                    when move_downright =>
+--                    -- 1 2 3 
+--                    elsif t_read_data=move_downright then
 --                        next_game_string <= vt100_cursor_downright;
---                    when move_downleft =>
---                        next_game_string <= vt100_cursor_downleft;
---                    when move_down =>
+--                    elsif t_read_data=move_down then
 --                        next_game_string <= vt100_cursor_down;
---
---                    when others =>
+--                    elsif t_read_data=move_downleft then
+--                        next_game_string <= vt100_cursor_downleft;
+--                    else
 --                        next_game_string <= empty_string;
---                end case;
+--                    end if;
+                end if;
 
             when GAME_STATE_TX_START =>
                 -- if the Tx UART has space
@@ -584,6 +610,9 @@ begin
             when GAME_STATE_TX_STRING_DONE =>
                 str_write_en <= '0';
                 game_next_state <= GAME_STATE_TX_STRING_WAIT;
+                if str_write_complete='1' then
+                    game_next_state <= GAME_STATE_IDLE;
+                end if;
 
             when GAME_STATE_TX_STRING_WAIT =>
                 -- wait for string writer to complete
