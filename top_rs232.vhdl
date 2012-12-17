@@ -60,6 +60,9 @@ architecture top_rs232_arch of top_rs232 is
     constant vt100_cursor_downleft : string(15 downto 1) := 
         ( esc,'[','D',esc,'[','B',esc,'[','D',nul,others=>nul);
 
+    constant space : unsigned(7 downto 0) := to_unsigned(16#20#,8);
+    constant trail : unsigned(7 downto 0) := to_unsigned(16#23#,8);
+
     constant empty_string : string(15 downto 1) :=
         ( nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul, nul );
 --        ( nul, others=>nul );
@@ -218,12 +221,12 @@ architecture top_rs232_arch of top_rs232 is
              );
     end component rs232_rx;
 
-    component edge_to_pulse is
-        Port ( CLK : in  STD_LOGIC;
-               Reset : in  STD_LOGIC;
-               Edge_in : in  STD_LOGIC;
-               Pulse_out : out  STD_LOGIC);
-    end component;
+--    component edge_to_pulse is
+--        Port ( CLK : in  STD_LOGIC;
+--               Reset : in  STD_LOGIC;
+--               Edge_in : in  STD_LOGIC;
+--               Pulse_out : out  STD_LOGIC);
+--    end component;
 
     component hex_to_7seg is
         port(  rst : in std_logic;
@@ -273,8 +276,7 @@ architecture top_rs232_arch of top_rs232 is
                 reset : in std_logic;
                 write_en : in std_logic;
 
-                row : in integer;
-                col : in integer;
+                address : natural;
 
                 data_in : in unsigned(7 downto 0);
                 data_out : out unsigned(7 downto 0)
@@ -317,9 +319,22 @@ architecture top_rs232_arch of top_rs232 is
     -- The Game state machine
     type game_state is
         ( GAME_STATE_INIT, 
+
+           -- we ping/pong back and forth between these states to
+           -- initialize our game board to a blank state
+          GAME_STATE_RESET_ROOM_1, 
+          GAME_STATE_RESET_ROOM_2, 
+
+          -- send Vt100 string to clear screen, init player location
+          GAME_STATE_INIT_SCREEN, 
+
           GAME_STATE_IDLE, 
+
+          -- pull character from the Rx UART
           GAME_STATE_START_POP, 
           GAME_STATE_DONE_POP,
+
+          GAME_STATE_TEST_MOVE,
 
           -- local echo ; drives the Rx'd char to Tx UART
           GAME_STATE_TX_START, 
@@ -329,7 +344,13 @@ architecture top_rs232_arch of top_rs232 is
           -- drive a null terminated string to the Tx UART
           GAME_STATE_TX_STRING_START,
           GAME_STATE_TX_STRING_DONE,
-          GAME_STATE_TX_STRING_WAIT
+          GAME_STATE_TX_STRING_WAIT,
+
+          -- check for collision
+          -- update our position in the board RAM 
+          GAME_STATE_UPDATE_BOARD_START,
+
+          GAME_STATE_ITS_GAME_OVER_MAN
         );
     signal game_curr_state, game_next_state : game_state;
     signal game_tx_write_en, game_next_tx_write_en : std_logic := '0';
@@ -353,6 +374,13 @@ architecture top_rs232_arch of top_rs232 is
     signal player_next_row : integer := 1;
     signal player_col : integer := 1;
     signal player_next_col : integer := 1;
+
+    -- game board RAM
+    signal game_board_write_en : std_logic := '0';
+    signal game_board_address : natural := 0;
+    signal game_board_data_in : unsigned(7 downto 0 );
+    signal game_board_data_out : unsigned(7 downto 0);
+
 begin
     -- Reset Button
     reset <= sw(0);
@@ -366,7 +394,8 @@ begin
 --    game_en <= sw(2);
 
     -- Led set to current received byte
-    led <= std_logic_vector(t_read_data);
+--    led <= std_logic_vector(game_board_data_out);
+--    led <= std_logic_vector(t_read_data);
     -- attach the receiver to the bottom LED
 --    led <= sw(7 downto 1) & t_rx;
 --    led <= sw(7 downto 1) & '0';
@@ -564,8 +593,54 @@ begin
         player_next_row <= player_row;
         player_next_col <= player_col;
 
+        game_board_address <= work.android_tools.position_to_address(player_row, player_col);
+        game_board_write_en <= '0';
+        game_board_data_in <= space;
+
+        led <= "00000000";
+
         case game_curr_state is
             when GAME_STATE_INIT =>
+                game_next_state <= GAME_STATE_RESET_ROOM_1;
+
+            when GAME_STATE_RESET_ROOM_1 | GAME_STATE_RESET_ROOM_2 =>
+                -- we ping/pong back and forth between these states to
+                -- initialize our game board to a blank state
+
+                game_board_write_en <= '1';
+                game_board_data_in <= space;
+
+                if game_curr_state=GAME_STATE_RESET_ROOM_1 then
+                    game_next_state <= GAME_STATE_RESET_ROOM_2;
+                else 
+                    game_next_state <= GAME_STATE_RESET_ROOM_1;
+                end if;
+              
+--                game_board_address <= work.android_tools.position_to_address(
+--                                                player_row, player_col);
+--                game_board_address <= (player_row*work.android_tools.row_width) + player_col;
+                player_next_row <= work.android_tools.calc_next_row(player_row,player_col);
+                player_next_col <= work.android_tools.calc_next_col(player_row,player_col);
+
+                -- pragma synthesis off
+                write( s, string'("init row=") & integer'image(player_row) );
+                write( s, string'(" col=") & integer'image(player_col) );
+                writeline(output,s);
+                -- pragma synthesis on
+
+                -- if we have reached the max position on the board, we are
+                -- done. Go to initialize the screen
+                if player_row=work.android_tools.row_width-1 and
+                   player_col=work.android_tools.col_height-1 then
+
+                    game_next_state <= GAME_STATE_INIT_SCREEN;
+                    game_board_write_en <= '0';
+                    -- go back to 1,1 (upper left)
+                    player_next_row <= 1;
+                    player_next_col <= 1;
+                end if;
+
+            when GAME_STATE_INIT_SCREEN =>
                 game_next_string <= vt100_clear_screen_and_move_home;
                 game_next_state <= GAME_STATE_TX_STRING_START;
 
@@ -590,6 +665,9 @@ begin
             when GAME_STATE_DONE_POP =>
                 -- we have popped a value from the Rx UART
                 game_next_data <= t_read_data;
+                game_next_state <= GAME_STATE_TEST_MOVE;
+
+            when GAME_STATE_TEST_MOVE =>
 
                 -- sw(2) is a "local echo" mode; simply re-write the received
                 -- character back out the Tx UART
@@ -598,14 +676,14 @@ begin
                     -- game drives Tx UART
                     game_en <= '1';
                 else 
-                    if t_read_data < to_unsigned(16#30#,8) or 
-                       t_read_data > to_unsigned(16#39#,8) then
-                        -- invalid character; ignore it
+                    if game_data < to_unsigned(16#31#,8) or 
+                       game_data > to_unsigned(16#39#,8) then
+                        -- invalid character or no motion; ignore it
                         game_next_state <= GAME_STATE_IDLE;
                     else 
                         game_next_state <= GAME_STATE_IDLE;
 
-                        calc_position_offset( t_read_data, row_adj, col_adj );        
+                        calc_position_offset( game_data, row_adj, col_adj );        
 
                         -- pragma synthesis off
                         write(s,string'("player adj row=")&integer'image(row_adj));
@@ -613,13 +691,14 @@ begin
                         writeline(output,s);
                         -- pragma synthesis on
 
+                        -- do not allow player to move out of range
                         if player_row+row_adj > 0 and
                            player_row+row_adj < work.android_tools.row_width and
                            player_col+col_adj > 0 and
                            player_col+col_adj < work.android_tools.col_height then
                             -- 
                             -- write a '#' in our current position
-                            game_next_data <= to_unsigned(16#23#,8);
+                            game_next_data <= trail;
                             -- game drives Tx UART
                             game_en <= '1';
 
@@ -632,7 +711,7 @@ begin
                             --
                             game_next_state <= GAME_STATE_TX_START;
 
-                            game_next_string <= game_move_response_string(t_read_data);
+                            game_next_string <= game_move_response_string(game_data);
                         end if;
                     end if;
                 end if;
@@ -689,10 +768,24 @@ begin
                 -- wait for string writer to complete
                 if str_write_complete='1' then
                     game_next_string <= empty_string;
-                    game_next_state <= GAME_STATE_IDLE;
+                    game_next_state <= GAME_STATE_UPDATE_BOARD_START;
                 else
                     game_next_state <= GAME_STATE_TX_STRING_WAIT;
                 end if;
+
+            when GAME_STATE_UPDATE_BOARD_START =>
+                -- write our current position into RAM
+                if game_board_data_out=trail then
+                    game_next_state <= GAME_STATE_ITS_GAME_OVER_MAN;
+                else 
+                    game_board_write_en <= '1';
+                    game_board_data_in <= trail;
+                    game_next_state <= GAME_STATE_IDLE;
+                end if;
+
+            when GAME_STATE_ITS_GAME_OVER_MAN =>
+                game_next_state <= GAME_STATE_ITS_GAME_OVER_MAN;
+                led <= "11111111";
                 
             when others =>
                 game_next_state <= GAME_STATE_IDLE;
@@ -715,6 +808,17 @@ begin
 
                 -- pulses on completion of the write 
                 write_complete=>str_write_complete );
+
+    --
+    --  The RAM storing the game board
+    --
+    game_board : board
+        port map( clk=>mclk,
+                   reset=>reset,
+                   write_en=> game_board_write_en,
+                   address => game_board_address,
+                   data_in => game_board_data_in,
+                   data_out => game_board_data_out );
 
     --
     -- PIO
